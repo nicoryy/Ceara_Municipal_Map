@@ -10,7 +10,7 @@
 [![HTML](https://img.shields.io/badge/HTML-5-E34F26?style=flat-square&logo=html5&logoColor=white)](https://developer.mozilla.org/en-US/docs/Web/HTML)
 [![License](https://img.shields.io/badge/License-MIT-purple?style=flat-square)](LICENSE)
 
-![Ceará Municipal Map preview](preview.png)
+![Ceará Municipal Map preview](public/profile.png)
 
 </div>
 
