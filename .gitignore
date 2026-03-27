@@ -1,0 +1,38 @@
+# Cache gerado automaticamente
+data/cache_dados.json
+
+# GeoJSON (dado governamental volumoso — exporte pelo QGIS)
+frontend/municipios_ce.geojson
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+
+# Dados sensíveis — nunca commitar planilhas reais
+*.xlsx
+*.xlsm
+*.xls
+*.csv
