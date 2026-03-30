@@ -1,8 +1,8 @@
 # Cache gerado automaticamente
 data/cache_dados.json
 
-# GeoJSON (dado governamental volumoso — exporte pelo QGIS)
-frontend/municipios_ce.geojson
+*.geojson
+*.qmd
 
 # Python
 __pycache__/

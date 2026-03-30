@@ -73,7 +73,12 @@ def municipios():
     for codigo, info in dados.items():
         status = info.get("status", "")
         cor = config.STATUS_CORES.get(status, config.COR_SEM_DADO)
-        resultado[codigo] = {"status": status, "cor": cor}
+        resultado[codigo] = {
+            "status":    status,
+            "cor":       cor,
+            "tipo":      info.get("tipo", ""),
+            "municipio": info.get("municipio", ""),
+        }
 
     return jsonify(resultado)
 
@@ -139,4 +144,4 @@ if __name__ == "__main__":
     log.info(f"  Acesse: http://localhost:{config.SERVER_PORT}")
     log.info("=" * 52)
 
-    app.run(host="127.0.0.1", port=config.SERVER_PORT, debug=False)
+    app.run(host="0.0.0.0", port=config.SERVER_PORT, debug=False)

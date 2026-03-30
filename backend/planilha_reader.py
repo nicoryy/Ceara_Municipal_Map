@@ -57,125 +57,88 @@ def _xlwings_arquivo_aberto(path: str):
     return None
 
 
-def ler_via_xlwings(path: str, aba: str, col_ibge: str, col_status: str) -> dict:
-    """
-    Le dados do Excel via xlwings.
-    Pre-condicao: arquivo DEVE estar aberto no Excel.
-    Lanca RuntimeError se nao encontrar o arquivo aberto.
-    """
+def ler_via_xlwings(path, aba, col_ibge, col_status, col_tipo, col_municipio=None):
     wb = _xlwings_arquivo_aberto(path)
     if wb is None:
-        raise RuntimeError(
-            f"Arquivo nao encontrado aberto no Excel: {os.path.basename(path)}"
-        )
-
-    log.info(f"[xlwings] Lendo arquivo ja aberto: {wb.name}")
-
+        raise RuntimeError(f"Arquivo não encontrado aberto no Excel: {os.path.basename(path)}")
+    log.info(f"[xlwings] Lendo arquivo já aberto: {wb.name}")
     try:
         sheet = wb.sheets[aba]
     except Exception:
         abas = [s.name for s in wb.sheets]
-        raise ValueError(
-            f"Aba '{aba}' nao encontrada. "
-            f"Abas disponiveis: {', '.join(abas)}"
-        )
-
+        raise ValueError(f"Aba '{aba}' não encontrada. Abas disponíveis: {', '.join(abas)}")
     dados_raw = sheet.used_range.value
-
     if not dados_raw or len(dados_raw) < 2:
         raise ValueError("Aba vazia ou sem linhas de dados")
-
     cabecalho = [str(c).strip() if c else "" for c in dados_raw[0]]
-
     try:
         idx_ibge   = cabecalho.index(col_ibge)
         idx_status = cabecalho.index(col_status)
     except ValueError as e:
-        raise ValueError(
-            f"Coluna nao encontrada: {e}. "
-            f"Colunas na aba: {', '.join(cabecalho)}"
-        )
-
-    resultado = _processar_linhas(dados_raw[1:], idx_ibge, idx_status)
-    log.info(f"[xlwings] {len(resultado)} municipios lidos")
+        raise ValueError(f"Coluna não encontrada: {e}. Colunas na aba: {', '.join(cabecalho)}")
+    idx_tipo      = cabecalho.index(col_tipo)      if col_tipo      in cabecalho else None
+    idx_municipio = cabecalho.index(col_municipio) if col_municipio in cabecalho else None
+    resultado = _processar_linhas(dados_raw[1:], idx_ibge, idx_status, idx_tipo, idx_municipio)
+    log.info(f"[xlwings] {len(resultado)} municípios lidos")
     return resultado
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Leitura via openpyxl (arquivo em disco, Excel pode estar fechado)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def ler_via_openpyxl(path: str, aba: str, col_ibge: str, col_status: str) -> dict:
-    """
-    Le o arquivo salvo em disco com openpyxl.
-    Funciona independente do Excel estar aberto ou nao.
-    """
+def ler_via_openpyxl(path, aba, col_ibge, col_status, col_tipo, col_municipio=None):
     from openpyxl import load_workbook
-
     log.info(f"[openpyxl] Lendo arquivo em disco: {os.path.basename(path)}")
-
     try:
         wb = load_workbook(path, read_only=True, data_only=True, keep_vba=False)
     except PermissionError:
         raise PermissionError(
             f"Arquivo bloqueado: {os.path.basename(path)}\n"
-            "Salve a planilha no Excel (Ctrl+S) e clique em Recarregar.\n"
-            "Se persistir, feche o Excel e tente novamente."
+            "Salve a planilha no Excel (Ctrl+S) e clique em Recarregar."
         )
     except Exception as e:
         raise RuntimeError(f"Erro ao abrir planilha: {e}")
-
     if aba not in wb.sheetnames:
         abas = ", ".join(wb.sheetnames)
         wb.close()
-        raise ValueError(f"Aba '{aba}' nao encontrada. Abas disponiveis: {abas}")
-
+        raise ValueError(f"Aba '{aba}' não encontrada. Abas disponíveis: {abas}")
     sheet = wb[aba]
     linhas = list(sheet.iter_rows(values_only=True))
     wb.close()
-
     if not linhas:
         raise ValueError("Aba vazia")
-
     cabecalho = [str(c).strip() if c else "" for c in linhas[0]]
-
     try:
         idx_ibge   = cabecalho.index(col_ibge)
         idx_status = cabecalho.index(col_status)
     except ValueError as e:
-        raise ValueError(
-            f"Coluna nao encontrada: {e}. "
-            f"Colunas na aba: {', '.join(cabecalho)}"
-        )
-
-    resultado = _processar_linhas(linhas[1:], idx_ibge, idx_status)
-    log.info(f"[openpyxl] {len(resultado)} municipios lidos")
+        raise ValueError(f"Coluna não encontrada: {e}. Colunas na aba: {', '.join(cabecalho)}")
+    idx_tipo      = cabecalho.index(col_tipo)      if col_tipo      in cabecalho else None
+    idx_municipio = cabecalho.index(col_municipio) if col_municipio in cabecalho else None
+    resultado = _processar_linhas(linhas[1:], idx_ibge, idx_status, idx_tipo, idx_municipio)
+    log.info(f"[openpyxl] {len(resultado)} municípios lidos")
     return resultado
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Processamento comum de linhas
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _processar_linhas(linhas, idx_ibge: int, idx_status: int) -> dict:
+def _processar_linhas(linhas, idx_ibge, idx_status, idx_tipo, idx_municipio=None):
     resultado = {}
     for linha in linhas:
         if not linha or linha[idx_ibge] is None:
             continue
-
         codigo = str(linha[idx_ibge]).strip()
         if codigo.endswith(".0"):
             codigo = codigo[:-2]
         codigo = codigo.zfill(7)
-
         if not codigo or codigo == "0000000":
             continue
-
-        status = str(linha[idx_status]).strip() if linha[idx_status] else ""
-        resultado[codigo] = {"status": status}
-
+        status    = str(linha[idx_status]).strip()    if linha[idx_status]                                else ""
+        tipo      = str(linha[idx_tipo]).strip()      if (idx_tipo      is not None and linha[idx_tipo])  else ""
+        municipio = str(linha[idx_municipio]).strip() if (idx_municipio is not None and linha[idx_municipio]) else ""
+        resultado[codigo] = {"status": status, "tipo": tipo, "municipio": municipio}
     return resultado
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Funcao principal chamada pelo servidor
@@ -191,11 +154,13 @@ def carregar_dados(config, forcar: bool = False):
 
     Retorna: (dados_dict, fonte_str)
     """
-    path       = config.PLANILHA_PATH
-    aba        = config.PLANILHA_ABA
-    col_ibge   = config.COLUNA_CODIGO_IBGE
-    col_status = config.COLUNA_STATUS
-    cache_path = config.CACHE_PATH
+    path          = config.PLANILHA_PATH
+    aba           = config.PLANILHA_ABA
+    col_ibge      = config.COLUNA_CODIGO_IBGE
+    col_status    = config.COLUNA_STATUS
+    cache_path    = config.CACHE_PATH
+    col_tipo      = config.COLUNA_TIPO
+    col_municipio = getattr(config, "COLUNA_MUNICIPIO", None)
 
     if not os.path.exists(path):
         raise FileNotFoundError(
@@ -230,7 +195,7 @@ def carregar_dados(config, forcar: bool = False):
     # Tentativa 1: xlwings (apenas se arquivo estiver aberto no Excel)
     if _xlwings_arquivo_aberto(path) is not None:
         try:
-            dados = ler_via_xlwings(path, aba, col_ibge, col_status)
+            dados = ler_via_xlwings(path, aba, col_ibge, col_status, col_tipo, col_municipio)
             fonte = "xlwings"
         except Exception as e:
             erros.append(f"xlwings: {e}")
@@ -243,7 +208,7 @@ def carregar_dados(config, forcar: bool = False):
         else:
             log.info("[openpyxl] Arquivo nao aberto no Excel — lendo disco")
         try:
-            dados = ler_via_openpyxl(path, aba, col_ibge, col_status)
+            dados = ler_via_openpyxl(path, aba, col_ibge, col_status, col_tipo, col_municipio)
             fonte = "openpyxl"
         except Exception as e:
             erros.append(f"openpyxl: {e}")

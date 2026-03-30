@@ -6,17 +6,19 @@
 # Exemplos:
 #   Windows:  r"C:\Users\Nicory\OneDrive\SATEL\mapa_municipios.xlsx"
 #   Relativo: "../data/mapa_municipios.xlsx"
-PLANILHA_PATH = r"C:\Users\SeuUsuario\OneDrive\sua_planilha.xlsx"
+PLANILHA_PATH = r"C:\Users\Satel\OneDrive - SATEL\Portal - Censo IP\Censo IP 2026.xlsm"
 
 # Nome exato da aba que contém os dados
-PLANILHA_ABA = "Municípios"
+PLANILHA_ABA = "tecnico"
 
 # Nome exato das colunas na planilha
 COLUNA_CODIGO_IBGE = "codigo_ibge"   # deve conter o código de 7 dígitos ex: 2304400
 COLUNA_STATUS      = "status"        # ex: "ativo", "pendente", "concluído"
+COLUNA_TIPO        = "tipo"          # ex: "ressalva", "normal"
+COLUNA_MUNICIPIO   = "MUNICIPIO"     # ex: "FORTALEZA - REGIONAL 1" (usado pelas regionais)
 
 # Caminho para o GeoJSON do Ceará exportado pelo QGIS
-GEOJSON_PATH = "../data/municipios_ce.geojson"
+GEOJSON_PATH = "../frontend/municipios_ce.geojson"
 
 # Caminho para o cache gerado automaticamente pelo servidor
 CACHE_PATH = "../data/cache_dados.json"
@@ -31,10 +33,10 @@ SERVER_PORT = 5000
 # =============================================================================
 STATUS_CORES = {
     # "valor_na_planilha": "cor_hex",
-    "ativo":      "#1D9E75",   # verde
-    "pendente":   "#EF9F27",   # amarelo
-    "concluído":  "#378ADD",   # azul
-    "bloqueado":  "#E24B4A",   # vermelho
+    "CADASTRO FINALIZADO": "#1D9E75",   # verde
+    "EM ANDAMENTO":   "#CAA800",   # amarelo
+    "CAMPO PARALISADO":  "#CB7841",   # azul
+    "NAO INICIADO":  "#E24B4A",   # vermelho
     # Adicione mais conforme necessário...
 }
 
@@ -43,4 +45,4 @@ COR_SEM_DADO = "#B4B2A9"
 
 # Cor da borda dos municípios no mapa
 COR_BORDA = "#ffffff"
-LARGURA_BORDA = 0.8
+LARGURA_BORDA = 0

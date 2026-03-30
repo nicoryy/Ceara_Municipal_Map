@@ -1,23 +1,30 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mapa Municipal — Ceará</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
     :root {
-      --bg:       #0f1117;
-      --surface:  #1a1d27;
+      --bg: #0f1117;
+      --surface: #1a1d27;
       --surface2: #22263a;
-      --border:   #2e3249;
-      --text:     #e2e4ef;
-      --muted:    #8b8fa8;
-      --accent:   #7c6ff7;
-      --radius:   10px;
-      --panel-w:  280px;
+      --border: #2e3249;
+      --text: #e2e4ef;
+      --muted: #8b8fa8;
+      --accent: #7c6ff7;
+      --radius: 10px;
+      --panel-w: 280px;
       --header-h: 54px;
     }
 
@@ -51,10 +58,17 @@
       flex: 1;
       white-space: nowrap;
     }
-    header h1 span { color: var(--muted); font-weight: 400; }
+
+    header h1 span {
+      color: var(--muted);
+      font-weight: 400;
+    }
 
     /* ── busca ── */
-    .search-wrap { position: relative; flex: 0 0 210px; }
+    .search-wrap {
+      position: relative;
+      flex: 0 0 210px;
+    }
 
     #busca {
       width: 100%;
@@ -67,12 +81,19 @@
       outline: none;
       transition: border-color .2s;
     }
-    #busca:focus { border-color: var(--accent); }
-    #busca::placeholder { color: var(--muted); }
+
+    #busca:focus {
+      border-color: var(--accent);
+    }
+
+    #busca::placeholder {
+      color: var(--muted);
+    }
 
     .search-icon {
       position: absolute;
-      left: 10px; top: 50%;
+      left: 10px;
+      top: 50%;
       transform: translateY(-50%);
       color: var(--muted);
       pointer-events: none;
@@ -82,7 +103,8 @@
     #busca-resultados {
       position: absolute;
       top: calc(100% + 4px);
-      left: 0; right: 0;
+      left: 0;
+      right: 0;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
@@ -90,7 +112,7 @@
       max-height: 220px;
       overflow-y: auto;
       display: none;
-      box-shadow: 0 8px 24px rgba(0,0,0,.5);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, .5);
     }
 
     .busca-item {
@@ -103,9 +125,20 @@
       border-bottom: 1px solid var(--border);
       transition: background .12s;
     }
-    .busca-item:last-child { border-bottom: none; }
-    .busca-item:hover { background: var(--surface2); }
-    .busca-item .ibge { color: var(--muted); font-size: 11px; font-family: monospace; }
+
+    .busca-item:last-child {
+      border-bottom: none;
+    }
+
+    .busca-item:hover {
+      background: var(--surface2);
+    }
+
+    .busca-item .ibge {
+      color: var(--muted);
+      font-size: 11px;
+      font-family: monospace;
+    }
 
     /* ── botão reload ── */
     #btn-reload {
@@ -122,18 +155,49 @@
       transition: border-color .2s, color .2s;
       white-space: nowrap;
     }
-    #btn-reload:hover { border-color: var(--accent); color: var(--accent); }
-    #btn-reload:disabled { opacity: .5; cursor: default; }
-    #btn-reload.loading .ri { animation: spin .6s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .ri { display: inline-block; font-size: 15px; line-height: 1; }
+
+    #btn-reload:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    #btn-reload:disabled {
+      opacity: .5;
+      cursor: default;
+    }
+
+    #btn-reload.loading .ri {
+      animation: spin .6s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .ri {
+      display: inline-block;
+      font-size: 15px;
+      line-height: 1;
+    }
 
     /* ── layout ── */
-    .main { display: flex; flex: 1; overflow: hidden; }
+    .main {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
 
     /* ── mapa ── */
-    #map { flex: 1; background: #090c14; }
-    .leaflet-tile-pane { filter: brightness(0.8) saturate(0.5); }
+    #map {
+      flex: 1;
+      background: #090c14;
+    }
+
+    .leaflet-tile-pane {
+      filter: brightness(0.8) saturate(0.5);
+    }
 
     /* ── tooltip leaflet ── */
     .leaflet-tooltip {
@@ -143,14 +207,40 @@
       color: var(--text) !important;
       font-size: 12px !important;
       padding: 6px 10px !important;
-      box-shadow: 0 4px 14px rgba(0,0,0,.5) !important;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, .5) !important;
       pointer-events: none !important;
     }
-    .leaflet-tooltip::before { display: none !important; }
-    .tt-nome { font-weight: 600; font-size: 13px; margin-bottom: 2px; }
-    .tt-ibge { color: var(--muted); font-size: 11px; font-family: monospace; }
-    .tt-status { margin-top: 4px; font-size: 12px; display: flex; align-items: center; gap: 5px; }
-    .tt-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+    .leaflet-tooltip::before {
+      display: none !important;
+    }
+
+    .tt-nome {
+      font-weight: 600;
+      font-size: 13px;
+      margin-bottom: 2px;
+    }
+
+    .tt-ibge {
+      color: var(--muted);
+      font-size: 11px;
+      font-family: monospace;
+    }
+
+    .tt-status {
+      margin-top: 4px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .tt-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
 
     /* ── painel lateral ── */
     #painel {
@@ -185,10 +275,16 @@
       font-weight: 400;
       display: none;
     }
-    .filtro-limpar.visivel { display: block; }
+
+    .filtro-limpar.visivel {
+      display: block;
+    }
 
     /* ── legenda / filtro ── */
-    #legenda-lista { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+    #legenda-lista {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+    }
 
     .legenda-item {
       display: flex;
@@ -202,16 +298,32 @@
       user-select: none;
       border: 1px solid transparent;
     }
-    .legenda-item:hover { background: var(--surface2); }
-    .legenda-item.ativo { background: var(--surface2); border-color: var(--border); }
-    .legenda-item.inativo { opacity: .35; }
+
+    .legenda-item:hover {
+      background: var(--surface2);
+    }
+
+    .legenda-item.ativo {
+      background: var(--surface2);
+      border-color: var(--border);
+    }
+
+    .legenda-item.inativo {
+      opacity: .35;
+    }
 
     .legenda-cor {
-      width: 13px; height: 13px;
+      width: 13px;
+      height: 13px;
       border-radius: 3px;
       flex-shrink: 0;
     }
-    .legenda-label { font-size: 13px; flex: 1; }
+
+    .legenda-label {
+      font-size: 13px;
+      flex: 1;
+    }
+
     .legenda-count {
       font-size: 11px;
       color: var(--muted);
@@ -235,10 +347,26 @@
       margin-top: 32px;
       line-height: 1.7;
     }
-    .placeholder em { font-style: normal; font-size: 22px; display: block; margin-bottom: 8px; }
 
-    .mun-nome  { font-size: 16px; font-weight: 600; margin-bottom: 3px; }
-    .mun-ibge  { font-size: 11px; color: var(--muted); font-family: monospace; margin-bottom: 14px; }
+    .placeholder em {
+      font-style: normal;
+      font-size: 22px;
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .mun-nome {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 3px;
+    }
+
+    .mun-ibge {
+      font-size: 11px;
+      color: var(--muted);
+      font-family: monospace;
+      margin-bottom: 14px;
+    }
 
     .mun-badge {
       display: inline-flex;
@@ -249,8 +377,18 @@
       padding: 5px 12px;
       border-radius: 20px;
     }
-    .mun-badge .dot { width: 8px; height: 8px; border-radius: 50%; }
-    .sem-dado { color: var(--muted); font-size: 13px; margin-top: 6px; }
+
+    .mun-badge .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .sem-dado {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 6px;
+    }
 
     /* ── status bar ── */
     #statusbar {
@@ -265,503 +403,738 @@
       color: var(--muted);
       flex-shrink: 0;
     }
-    .dot-ok  { color: #1D9E75; }
-    .dot-err { color: #E24B4A; }
+
+    .dot-ok {
+      color: #1D9E75;
+    }
+
+    .dot-err {
+      color: #E24B4A;
+    }
   </style>
 </head>
+
 <body>
 
-<header>
-  <h1>Mapa Municipal <span>/ Ceará</span></h1>
+  <header>
+    <h1>Mapa Municipal <span>/ Ceará</span></h1>
 
-  <div class="search-wrap">
-    <span class="search-icon">⌕</span>
-    <input id="busca" type="text" placeholder="Buscar município..." autocomplete="off">
-    <div id="busca-resultados"></div>
-  </div>
-
-  <button id="btn-reload">
-    <span class="ri">↻</span>
-    Recarregar dados
-  </button>
-</header>
-
-<div class="main">
-  <div id="map"></div>
-
-  <div id="painel">
-    <div class="painel-titulo">
-      Legenda / Filtro
-      <span class="filtro-limpar" id="filtro-limpar" onclick="limparFiltro()">Limpar filtro</span>
+    <div class="search-wrap">
+      <span class="search-icon">⌕</span>
+      <input id="busca" type="text" placeholder="Buscar município..." autocomplete="off">
+      <div id="busca-resultados"></div>
     </div>
-    <div id="legenda-lista"></div>
-    <div id="card-municipio">
-      <div class="placeholder">
-        <em>🗺️</em>
-        Clique em um município<br>para ver detalhes
+
+    <button id="btn-reload">
+      <span class="ri">↻</span>
+      Recarregar dados
+    </button>
+  </header>
+
+  <div class="main">
+    <div id="map"></div>
+
+    <div id="painel">
+      <div class="painel-titulo">
+        Status
+        <span class="filtro-limpar" id="filtro-status-limpar" onclick="limparFiltro('status')">Limpar</span>
+      </div>
+      <div id="legenda-lista"></div>
+
+      <div class="painel-titulo" style="margin-top:0">
+        Tipo
+        <span class="filtro-limpar" id="filtro-tipo-limpar" onclick="limparFiltro('tipo')">Limpar</span>
+      </div>
+      <div id="tipo-lista"></div>
+
+      <div id="card-municipio">
+        <div class="placeholder">
+          <em>🗺️</em>
+          Clique em um município<br>para ver detalhes
+        </div>
       </div>
     </div>
   </div>
-</div>
 
-<div id="statusbar">
-  <span id="sb-conn"><span class="dot-err">●</span> Conectando...</span>
-  <span id="sb-total"></span>
-  <span id="sb-hora"></span>
-</div>
+  <div id="statusbar">
+    <span id="sb-conn"><span class="dot-err">●</span> Conectando...</span>
+    <span id="sb-total"></span>
+    <span id="sb-hora"></span>
+  </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script>
-// ════════════════════════════════════════════════════════════
-// CONFIG
-// ════════════════════════════════════════════════════════════
-const API = "http://localhost:5000";
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // ════════════════════════════════════════════════════════════
+    // CONFIG
+    // ════════════════════════════════════════════════════════════
+    const API = "http://localhost:5000";
 
-// ════════════════════════════════════════════════════════════
-// ESTADO
-// ════════════════════════════════════════════════════════════
-let dadosPlanilha  = {};      // { "2304400": { status, cor } }
-let geojsonData    = null;
-let geojsonLayer   = null;
-let featureLayers  = {};      // { ibge: leaflet_layer }
-let selectedLayer  = null;
-let selectedIbge   = null;
-let filtroAtivo    = null;    // status selecionado na legenda, ou null
+    // ════════════════════════════════════════════════════════════
+    // ESTADO
+    // ════════════════════════════════════════════════════════════
+    let dadosPlanilha = {};      // { "2304400": { status, cor } }
+    let geojsonData = null;
+    let geojsonLayer = null;
+    let featureLayers = {};      // { ibge: leaflet_layer }
+    let selectedLayer = null;
+    let selectedIbge = null;
+    let regionaisLayer = null;
+    let regionaisData = null;
+    let regionaisLayers = {};  // { "FORTALEZA - REGIONAL 1": layer }
+    let filtros = { status: null, tipo: null };    // status selecionado na legenda, ou null
 
-// ════════════════════════════════════════════════════════════
-// MAPA
-// ════════════════════════════════════════════════════════════
-const map = L.map("map", { zoomControl: true, attributionControl: false });
+    // ════════════════════════════════════════════════════════════
+    // MAPA
+    // ════════════════════════════════════════════════════════════
+    const map = L.map("map", { zoomControl: true, attributionControl: false });
 
-L.tileLayer(
-  "https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png",
-  { subdomains: "abcd", maxZoom: 15 }
-).addTo(map);
+    L.tileLayer(
+      "https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png",
+      { subdomains: "abcd", maxZoom: 15 }
+    ).addTo(map);
 
-const CE_BOUNDS = L.latLngBounds(L.latLng(-7.86,-41.43), L.latLng(-2.78,-37.25));
-map.fitBounds(CE_BOUNDS);
-map.setMaxBounds(CE_BOUNDS.pad(0.35));
+    const CE_BOUNDS = L.latLngBounds(L.latLng(-7.86, -41.43), L.latLng(-2.78, -37.25));
+    map.fitBounds(CE_BOUNDS);
+    map.setMaxBounds(CE_BOUNDS.pad(0.35));
 
-// Fecha busca ao mover o mapa
-map.on("click", () => fecharBusca());
+    // Fecha busca ao mover o mapa
+    map.on("click", () => fecharBusca());
 
-// ════════════════════════════════════════════════════════════
-// ESTILO
-// ════════════════════════════════════════════════════════════
-function getEstilo(ibge, opcoes = {}) {
-  const dado   = dadosPlanilha[ibge];
-  const cor    = dado ? dado.cor : "#1e2236";
-  const status = dado ? dado.status : "";
+    // ════════════════════════════════════════════════════════════
+    // ESTILO
+    // ════════════════════════════════════════════════════════════
+    function getEstilo(ibge, opcoes = {}) {
+      const dado = dadosPlanilha[ibge];
+      const cor = dado ? dado.cor : "#1e2236";
+      const status = dado ? dado.status : "";
+      const tipo = dado ? dado.tipo : "";
 
-  // Se há filtro ativo e este município não bate, fica apagado
-  const apagado = filtroAtivo !== null && status !== filtroAtivo;
+      const apagado = (
+        (filtros.status !== null && status !== filtros.status) ||
+        (filtros.tipo !== null && tipo !== filtros.tipo)
+      );
 
-  return {
-    fillColor:   cor,
-    fillOpacity: apagado ? 0.08 : (opcoes.hover ? 0.92 : opcoes.selected ? 1 : 0.72),
-    color:       opcoes.selected ? "#7c6ff7" : "#0a0d16",
-    weight:      opcoes.selected ? 2.2 : opcoes.hover ? 1.4 : 0.6,
-    opacity:     apagado ? 0.3 : 1,
-  };
-}
-
-function aplicarEstiloNormal(layer, ibge) {
-  layer.setStyle(getEstilo(ibge));
-}
-
-function aplicarEstiloHover(layer, ibge) {
-  if (layer === selectedLayer) return;
-  layer.setStyle(getEstilo(ibge, { hover: true }));
-}
-
-function aplicarEstiloSelecionado(layer, ibge) {
-  layer.setStyle(getEstilo(ibge, { selected: true }));
-}
-
-// ════════════════════════════════════════════════════════════
-// GEOJSON
-// ════════════════════════════════════════════════════════════
-function extrairPropriedades(props) {
-  const ibge = String(
-    props.CD_MUN || props.codigo_ibge || props.geocodigo ||
-    props.CD_GEOCMU || props.GEOCODIGO || ""
-  ).trim().replace(/\.0$/, "").padStart(7, "0");
-
-  const nome = props.NM_MUN || props.nome || props.NOME || props.NM_MUNICIPIO || ibge;
-  return { ibge, nome };
-}
-
-async function carregarGeojson() {
-  try {
-    const r = await fetch("/municipios_ce.geojson");
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    geojsonData = await r.json();
-
-    geojsonLayer = L.geoJSON(geojsonData, {
-      style: f => {
-        const { ibge } = extrairPropriedades(f.properties);
-        return getEstilo(ibge);
-      },
-      onEachFeature: (feature, layer) => {
-        const { ibge, nome } = extrairPropriedades(feature.properties);
-        featureLayers[ibge] = layer;
-
-        // ── hover ──────────────────────────────────────────
-        layer.on("mouseover", function(e) {
-          aplicarEstiloHover(this, ibge);
-
-          const dado   = dadosPlanilha[ibge];
-          const status = dado ? dado.status : "";
-          const cor    = dado ? dado.cor    : "";
-
-          const statusHtml = status
-            ? `<div class="tt-status">
-                 <span class="tt-dot" style="background:${cor}"></span>
-                 ${status}
-               </div>`
-            : `<div class="tt-status" style="color:#8b8fa8">Sem dado</div>`;
-
-          this.bindTooltip(
-            `<div class="tt-nome">${nome}</div>
-             <div class="tt-ibge">${ibge}</div>
-             ${statusHtml}`,
-            { sticky: true, direction: "top", offset: [0, -6], opacity: 1 }
-          ).openTooltip(e.latlng);
-        });
-
-        // ── mouseout ────────────────────────────────────────
-        layer.on("mouseout", function() {
-          // Só reseta se não for o selecionado
-          if (this !== selectedLayer) {
-            aplicarEstiloNormal(this, ibge);
-          }
-          this.closeTooltip();
-        });
-
-        // ── click ───────────────────────────────────────────
-        layer.on("click", function() {
-          selecionarMunicipio(ibge, nome, this);
-        });
-      },
-    }).addTo(map);
-
-    map.fitBounds(geojsonLayer.getBounds());
-
-  } catch (e) {
-    console.error("GeoJSON:", e);
-    setSb(false, "GeoJSON não encontrado em frontend/municipios_ce.geojson");
-  }
-}
-
-// ════════════════════════════════════════════════════════════
-// DADOS DA API
-// ════════════════════════════════════════════════════════════
-async function carregarDados() {
-  try {
-    const r = await fetch(`${API}/municipios`);
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    dadosPlanilha = await r.json();
-
-    // Atualiza estilos de todos os polígonos
-    if (geojsonLayer) {
-      geojsonLayer.eachLayer(layer => {
-        if (layer.feature) {
-          const { ibge } = extrairPropriedades(layer.feature.properties);
-          if (layer === selectedLayer) {
-            aplicarEstiloSelecionado(layer, ibge);
-          } else {
-            aplicarEstiloNormal(layer, ibge);
-          }
-        }
-      });
+      return {
+        fillColor: cor,
+        fillOpacity: apagado ? 0.08 : (opcoes.hover ? 0.92 : opcoes.selected ? 1 : 0.72),
+        color: opcoes.selected ? "#7c6ff7" : "#0a0d16",
+        weight: opcoes.selected ? 2.2 : opcoes.hover ? 1.4 : 0.6,
+        opacity: apagado ? 0.3 : 1,
+      };
     }
 
-    renderizarLegenda();
-    await atualizarSb();
-    return true;
-  } catch (e) {
-    console.error("API:", e);
-    setSb(false, "Servidor indisponível — execute server.py");
-    return false;
-  }
-}
+    function getEstiloRegional(chave, opcoes = {}) {
+      const dado = chave ? dadosPorMunicipio[chave] : null;
+      const cor = dado ? dado.cor : "#1e2236";
 
-// ════════════════════════════════════════════════════════════
-// SELEÇÃO DE MUNICÍPIO
-// ════════════════════════════════════════════════════════════
-function selecionarMunicipio(ibge, nome, layer) {
-  // Remove seleção anterior
-  if (selectedLayer && selectedLayer !== layer) {
-    const ibgeAnterior = selectedIbge;
-    aplicarEstiloNormal(selectedLayer, ibgeAnterior);
-  }
+      const status = dado ? dado.status : "";
+      const tipo = dado ? dado.tipo : "";
+      const apagado = (
+        (filtros.status !== null && status !== filtros.status) ||
+        (filtros.tipo !== null && tipo !== filtros.tipo)
+      );
 
-  selectedLayer = layer;
-  selectedIbge  = ibge;
-  aplicarEstiloSelecionado(layer, ibge);
+      return {
+        fillColor: cor,
+        fillOpacity: apagado ? 0.08 : (opcoes.hover ? 0.92 : opcoes.selected ? 1 : 0.72),
+        color: opcoes.selected ? "#7c6ff7" : "#0a0d16",
+        weight: opcoes.selected ? 2.2 : opcoes.hover ? 1.4 : 0.6,
+        opacity: apagado ? 0.3 : 1,
+      };
+    }
 
-  map.flyToBounds(layer.getBounds(), { padding: [80, 80], duration: 0.6, maxZoom: 10 });
+    function aplicarEstiloSelecionadoRegional(layer, chave) {
+      layer.setStyle(getEstiloRegional(chave, { selected: true }));
+    }
 
-  const dado   = dadosPlanilha[ibge];
-  const status = dado ? dado.status : "";
-  const cor    = dado ? dado.cor    : "";
+    function selecionarRegional(chave, layer) {
+      if (selectedLayer && selectedLayer !== layer) {
+        // Reset anterior — pode ser município ou regional
+        if (selectedLayer.feature) {
+          const props = selectedLayer.feature.properties;
+          if (props.regiao_adm !== undefined) {
+            regionaisLayer.resetStyle(selectedLayer);
+            const chaveAnt = chaveRegional(props);
+            selectedLayer.setStyle(getEstiloRegional(chaveAnt));
+          } else {
+            const { ibge } = extrairPropriedades(props);
+            aplicarEstiloNormal(selectedLayer, ibge);
+          }
+        }
+      }
 
-  let html = `
+      selectedLayer = layer;
+      selectedIbge = null;
+      aplicarEstiloSelecionadoRegional(layer, chave);
+
+      map.flyToBounds(layer.getBounds(), { padding: [80, 80], duration: 0.5, maxZoom: 12 });
+
+      const dado = dadosPorMunicipio[chave];
+      const status = dado ? dado.status : "";
+      const cor = dado ? dado.cor : "";
+      const tipo = dado ? dado.tipo : "";
+
+      let html = `
+    <div class="mun-nome">${chave}</div>
+    <div class="mun-ibge" style="font-family:inherit">Regional de Fortaleza</div>
+  `;
+
+      if (status) {
+        html += `
+      <div class="mun-badge" style="background:${cor}22;color:${cor};border:1px solid ${cor}55;margin-top:14px">
+        <span class="dot" style="background:${cor}"></span>${status}
+      </div>
+    `;
+      } else {
+        html += `<div class="sem-dado" style="margin-top:14px">Sem dado na planilha</div>`;
+      }
+
+      if (tipo) {
+        html += `<div style="margin-top:8px;font-size:12px;color:var(--muted)">Tipo: <span style="color:var(--text)">${tipo}</span></div>`;
+      }
+
+      document.getElementById("card-municipio").innerHTML = html;
+    }
+
+    function aplicarEstiloNormal(layer, ibge) {
+      layer.setStyle(getEstilo(ibge));
+    }
+
+    function aplicarEstiloHover(layer, ibge) {
+      if (layer === selectedLayer) return;
+      layer.setStyle(getEstilo(ibge, { hover: true }));
+    }
+
+    function aplicarEstiloSelecionado(layer, ibge) {
+      layer.setStyle(getEstilo(ibge, { selected: true }));
+    }
+
+    function buscarDadoRegional(chave) {
+      return dadosPorMunicipio[chave] || null;
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // GEOJSON
+    // ════════════════════════════════════════════════════════════
+
+    function chaveRegional(props) {
+      // regiao_adm vem como "SER 1", "SER 11" etc.
+      const ser = String(props.regiao_adm || "").trim();
+      const num = ser.replace(/^SER\s*/i, "").trim();
+      if (!num) return null;
+      return `FORTALEZA - REGIONAL ${num}`;
+    }
+
+    function extrairPropriedades(props) {
+      const ibge = String(
+        props.codigo_ibg ||   // ← campo real do seu GeoJSON (QGIS truncou)
+        props.CD_MUN ||
+        props.codigo_ibge ||
+        props.geocodigo ||
+        props.CD_GEOCMU ||
+        props.GEOCODIGO || ""
+      ).trim().replace(/\.0$/, "").padStart(7, "0");
+
+      const nome = props.Municipio ||   // ← campo real do seu GeoJSON
+        props.NM_MUN ||
+        props.nome ||
+        props.NOME ||
+        props.NM_MUNICIPIO || ibge;
+
+      return { ibge, nome };
+    }
+
+    async function carregarGeojson() {
+      try {
+        const r = await fetch("/municipios_ce.geojson");
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        geojsonData = await r.json();
+
+        const IBGE_FORTALEZA = "2304400";
+        const featuresFiltered = {
+          ...geojsonData,
+          features: geojsonData.features.filter(f => {
+            const { ibge } = extrairPropriedades(f.properties);
+            return ibge !== IBGE_FORTALEZA;
+          }),
+        };
+        geojsonLayer = L.geoJSON(featuresFiltered, {
+          style: f => {
+            const { ibge } = extrairPropriedades(f.properties);
+            return getEstilo(ibge);
+          },
+          onEachFeature: (feature, layer) => {
+            const { ibge, nome } = extrairPropriedades(feature.properties);
+            featureLayers[ibge] = layer;
+
+            // ── hover ──────────────────────────────────────────
+            layer.on("mouseover", function (e) {
+              aplicarEstiloHover(this, ibge);
+
+              const dado = dadosPlanilha[ibge];
+              const status = dado ? dado.status : "";
+              const cor = dado ? dado.cor : "";
+              const tipo = dado ? dado.tipo : "";
+
+              const statusHtml = status
+                ? `<div class="tt-status">
+                <span class="tt-dot" style="background:${cor}"></span>
+                ${status}${tipo ? ` · ${tipo}` : ""}
+              </div>`
+                : `<div class="tt-status" style="color:#8b8fa8">Sem dado</div>`;
+
+              this.bindTooltip(
+                `<div class="tt-nome">${nome}</div>
+             <div class="tt-ibge">${ibge}</div>
+             ${statusHtml}`,
+                { sticky: true, direction: "top", offset: [0, -6], opacity: 1 }
+              ).openTooltip(e.latlng);
+            });
+
+            // ── mouseout ────────────────────────────────────────
+            layer.on("mouseout", function () {
+              // Só reseta se não for o selecionado
+              if (this !== selectedLayer) {
+                aplicarEstiloNormal(this, ibge);
+              }
+              this.closeTooltip();
+            });
+
+            // ── click ───────────────────────────────────────────
+            layer.on("click", function () {
+              selecionarMunicipio(ibge, nome, this);
+            });
+          },
+        }).addTo(map);
+
+        map.fitBounds(geojsonLayer.getBounds());
+
+      } catch (e) {
+        console.error("GeoJSON:", e);
+        setSb(false, "GeoJSON não encontrado em frontend/municipios_ce.geojson");
+      }
+    }
+
+    async function carregarRegionais() {
+      try {
+        const r = await fetch("/limites_regionais_fortaleza.geojson");
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        regionaisData = await r.json();
+
+        regionaisLayer = L.geoJSON(regionaisData, {
+          style: f => {
+            const chave = chaveRegional(f.properties);
+            return getEstiloRegional(chave);
+          },
+          onEachFeature: (feature, layer) => {
+            const props = feature.properties;
+            const chave = chaveRegional(props);
+            if (!chave) return;
+            regionaisLayers[chave] = layer;
+
+            layer.on("mouseover", function (e) {
+              if (this !== selectedLayer) this.setStyle({ fillOpacity: 0.92, weight: 1.8, color: "#ffffff" });
+              const dado = buscarDadoRegional(chave);
+              const status = dado ? dado.status : "";
+              const cor = dado ? dado.cor : "";
+              const statusHtml = status
+                ? `<div class="tt-status"><span class="tt-dot" style="background:${cor}"></span>${status}${dado.tipo ? ` · ${dado.tipo}` : ""}</div>`
+                : `<div class="tt-status" style="color:#8b8fa8">Sem dado</div>`;
+              this.bindTooltip(
+                `<div class="tt-nome">${chave}</div>${statusHtml}`,
+                { sticky: true, direction: "top", offset: [0, -6], opacity: 1 }
+              ).openTooltip(e.latlng);
+            });
+
+            layer.on("mouseout", function () {
+              if (this !== selectedLayer) regionaisLayer.resetStyle(this);
+              this.closeTooltip();
+            });
+
+            layer.on("click", function () {
+              selecionarRegional(chave, this);
+            });
+          },
+        }).addTo(map);
+
+      } catch (e) {
+        console.error("Regionais GeoJSON:", e);
+      }
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // DADOS DA API
+    // ════════════════════════════════════════════════════════════
+    // Índice secundário: { "FORTALEZA - REGIONAL 1": { status, cor, tipo, municipio } }
+    let dadosPorMunicipio = {};
+
+    async function carregarDados() {
+      try {
+        const r = await fetch(`${API}/municipios`);
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        dadosPlanilha = await r.json();
+
+        // Monta índice por nome de município (para regionais)
+        dadosPorMunicipio = {};
+        Object.values(dadosPlanilha).forEach(d => {
+          if (d.municipio) dadosPorMunicipio[d.municipio] = d;
+        });
+
+        // Atualiza estilos
+        if (geojsonLayer) {
+          geojsonLayer.eachLayer(layer => {
+            if (!layer.feature) return;
+            const { ibge } = extrairPropriedades(layer.feature.properties);
+            layer === selectedLayer
+              ? aplicarEstiloSelecionado(layer, ibge)
+              : aplicarEstiloNormal(layer, ibge);
+          });
+        }
+
+        if (regionaisLayer) {
+          regionaisLayer.eachLayer(layer => {
+            if (!layer.feature) return;
+            const chave = chaveRegional(layer.feature.properties);
+            if (!chave) return;
+            layer === selectedLayer
+              ? aplicarEstiloSelecionadoRegional(layer, chave)
+              : regionaisLayer.resetStyle(layer);
+            // Reaplicar estilo correto
+            layer.setStyle(getEstiloRegional(chave));
+          });
+        }
+
+        renderizarLegenda();
+        await atualizarSb();
+        return true;
+      } catch (e) {
+        console.error("API:", e);
+        setSb(false, "Servidor indisponível — execute server.py");
+        return false;
+      }
+    }
+    // ════════════════════════════════════════════════════════════
+    // SELEÇÃO DE MUNICÍPIO
+    // ════════════════════════════════════════════════════════════
+    function selecionarMunicipio(ibge, nome, layer) {
+      // Remove seleção anterior
+      if (selectedLayer && selectedLayer !== layer) {
+        const ibgeAnterior = selectedIbge;
+        aplicarEstiloNormal(selectedLayer, ibgeAnterior);
+      }
+
+      selectedLayer = layer;
+      selectedIbge = ibge;
+      aplicarEstiloSelecionado(layer, ibge);
+
+      map.flyToBounds(layer.getBounds(), { padding: [80, 80], duration: 0.6, maxZoom: 10 });
+
+      const dado = dadosPlanilha[ibge];
+      const status = dado ? dado.status : "";
+      const cor = dado ? dado.cor : "";
+      const tipo = dado ? dado.tipo : "";
+
+      let html = `
     <div class="mun-nome">${nome}</div>
     <div class="mun-ibge">IBGE: ${ibge}</div>
   `;
 
-  if (status) {
-    html += `
+      if (status) {
+        html += `
       <div class="mun-badge" style="background:${cor}22; color:${cor}; border:1px solid ${cor}55">
         <span class="dot" style="background:${cor}"></span>
         ${status}
       </div>
     `;
-  } else {
-    html += `<div class="sem-dado">Sem dado na planilha</div>`;
-  }
+      }
 
-  document.getElementById("card-municipio").innerHTML = html;
-}
+      else if (tipo) {
+        html += `<div style="margin-top:8px;font-size:12px;color:var(--muted)">Tipo: <span style="color:var(--text)">${tipo}</span></div>`;
+      } else {
+        html += `<div class="sem-dado">Sem dado na planilha</div>`;
+      }
 
-// ════════════════════════════════════════════════════════════
-// LEGENDA / FILTRO
-// ════════════════════════════════════════════════════════════
-function renderizarLegenda() {
-  // Contagem por status
-  const contagem = {};
-  Object.values(dadosPlanilha).forEach(d => {
-    const s = d.status || "";
-    if (s) contagem[s] = (contagem[s] || 0) + 1;
-  });
+      document.getElementById("card-municipio").innerHTML = html;
+    }
 
-  // Municípios sem dado
-  let semDado = 0;
-  if (geojsonData) {
-    geojsonData.features.forEach(f => {
-      const { ibge } = extrairPropriedades(f.properties);
-      if (!dadosPlanilha[ibge]) semDado++;
-    });
-  }
+    // ════════════════════════════════════════════════════════════
+    // LEGENDA / FILTRO
+    // ════════════════════════════════════════════════════════════
+    function renderizarLegenda() {
+      const contagem = {};
+      Object.values(dadosPlanilha).forEach(d => {
+        if (d.status) contagem[d.status] = (contagem[d.status] || 0) + 1;
+      });
 
-  const container = document.getElementById("legenda-lista");
-  container.innerHTML = "";
+      let semDado = 0;
+      if (geojsonData) {
+        geojsonData.features.forEach(f => {
+          const { ibge } = extrairPropriedades(f.properties);
+          if (!dadosPlanilha[ibge]) semDado++;
+        });
+      }
 
-  // Status com dados
-  Object.entries(contagem).forEach(([status, count]) => {
-    const cor = Object.values(dadosPlanilha).find(d => d.status === status)?.cor || "#888";
-    const item = criarItemLegenda(status, cor, count);
-    container.appendChild(item);
-  });
+      const container = document.getElementById("legenda-lista");
+      container.innerHTML = "";
+      Object.entries(contagem).forEach(([status, count]) => {
+        const cor = Object.values(dadosPlanilha).find(d => d.status === status)?.cor || "#888";
+        container.appendChild(criarItemFiltro("status", status, cor, count));
+      });
+      if (semDado > 0) {
+        container.appendChild(criarItemFiltro("status", "(sem dado)", "#1e2236", semDado, true));
+      }
 
-  // Sem dado
-  if (semDado > 0) {
-    const item = criarItemLegenda("(sem dado)", "#1e2236", semDado, true);
-    container.appendChild(item);
-  }
-}
+      renderizarTipos();
+    }
 
-function criarItemLegenda(status, cor, count, semDado = false) {
-  const div = document.createElement("div");
-  div.className = "legenda-item";
-  div.innerHTML = `
-    <div class="legenda-cor" style="background:${cor}"></div>
-    <span class="legenda-label">${status}</span>
+    function renderizarTipos() {
+      const contagem = {};
+      Object.values(dadosPlanilha).forEach(d => {
+        if (d.tipo) contagem[d.tipo] = (contagem[d.tipo] || 0) + 1;
+      });
+
+      const container = document.getElementById("tipo-lista");
+      container.innerHTML = "";
+
+      if (Object.keys(contagem).length === 0) {
+        container.innerHTML = `<div style="padding:10px 16px;font-size:12px;color:var(--muted)">Nenhum tipo encontrado</div>`;
+        return;
+      }
+
+      Object.entries(contagem).forEach(([tipo, count]) => {
+        container.appendChild(criarItemFiltro("tipo", tipo, "var(--muted)", count));
+      });
+    }
+
+    function criarItemFiltro(qual, valor, cor, count, semDado = false) {
+      const div = document.createElement("div");
+      div.className = "legenda-item";
+      div.dataset.qual = qual;
+      div.dataset.valor = valor;
+
+      // Para tipo, usa um quadrado neutro com borda colorida
+      const corEl = qual === "tipo"
+        ? `<div class="legenda-cor" style="background:var(--surface2);border:2px solid var(--accent)"></div>`
+        : `<div class="legenda-cor" style="background:${cor}"></div>`;
+
+      div.innerHTML = `
+    ${corEl}
+    <span class="legenda-label">${valor}</span>
     <span class="legenda-count">${count}</span>
   `;
 
-  if (!semDado) {
-    div.addEventListener("click", () => toggleFiltro(status, div));
-  }
-
-  return div;
-}
-
-function toggleFiltro(status, itemEl) {
-  if (filtroAtivo === status) {
-    // Desliga filtro
-    filtroAtivo = null;
-    document.querySelectorAll(".legenda-item").forEach(el => {
-      el.classList.remove("ativo", "inativo");
-    });
-    document.getElementById("filtro-limpar").classList.remove("visivel");
-  } else {
-    // Liga filtro
-    filtroAtivo = status;
-    document.querySelectorAll(".legenda-item").forEach(el => {
-      const label = el.querySelector(".legenda-label")?.textContent;
-      if (label === status) {
-        el.classList.add("ativo");
-        el.classList.remove("inativo");
-      } else {
-        el.classList.add("inativo");
-        el.classList.remove("ativo");
+      if (!semDado) {
+        div.addEventListener("click", () => toggleFiltro(qual, valor));
       }
-    });
-    document.getElementById("filtro-limpar").classList.add("visivel");
-  }
-
-  // Reaplica estilos no mapa
-  if (geojsonLayer) {
-    geojsonLayer.eachLayer(layer => {
-      if (!layer.feature) return;
-      const { ibge } = extrairPropriedades(layer.feature.properties);
-      if (layer === selectedLayer) {
-        aplicarEstiloSelecionado(layer, ibge);
-      } else {
-        aplicarEstiloNormal(layer, ibge);
-      }
-    });
-  }
-}
-
-function limparFiltro() {
-  filtroAtivo = null;
-  document.querySelectorAll(".legenda-item").forEach(el => {
-    el.classList.remove("ativo", "inativo");
-  });
-  document.getElementById("filtro-limpar").classList.remove("visivel");
-
-  if (geojsonLayer) {
-    geojsonLayer.eachLayer(layer => {
-      if (!layer.feature) return;
-      const { ibge } = extrairPropriedades(layer.feature.properties);
-      if (layer === selectedLayer) {
-        aplicarEstiloSelecionado(layer, ibge);
-      } else {
-        aplicarEstiloNormal(layer, ibge);
-      }
-    });
-  }
-}
-
-// ════════════════════════════════════════════════════════════
-// BUSCA
-// ════════════════════════════════════════════════════════════
-const inputBusca = document.getElementById("busca");
-const listaBusca = document.getElementById("busca-resultados");
-
-function fecharBusca() {
-  listaBusca.style.display = "none";
-  inputBusca.blur();
-}
-
-function normalizar(s) {
-  return s.toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
-}
-
-inputBusca.addEventListener("input", function() {
-  const q = normalizar(this.value.trim());
-  listaBusca.style.display = "none";
-
-  if (q.length < 2 || !geojsonData) return;
-
-  const resultados = [];
-  geojsonData.features.forEach(f => {
-    const { ibge, nome } = extrairPropriedades(f.properties);
-    if (normalizar(nome).includes(q) || ibge.includes(q)) {
-      resultados.push({ ibge, nome });
+      return div;
     }
-  });
 
-  resultados.sort((a, b) => a.nome.localeCompare(b.nome));
-  const top = resultados.slice(0, 10);
+    function toggleFiltro(qual, valor) {
+      if (filtros[qual] === valor) {
+        filtros[qual] = null;
+        document.getElementById(`filtro-${qual}-limpar`).classList.remove("visivel");
+      } else {
+        filtros[qual] = valor;
+        document.getElementById(`filtro-${qual}-limpar`).classList.add("visivel");
+      }
 
-  if (!top.length) return;
+      // Atualiza visual dos itens da seção clicada
+      document.querySelectorAll(`.legenda-item[data-qual="${qual}"]`).forEach(el => {
+        const ativo = filtros[qual] === null || el.dataset.valor === filtros[qual];
+        el.classList.toggle("ativo", ativo && filtros[qual] !== null);
+        el.classList.toggle("inativo", !ativo);
+      });
 
-  listaBusca.innerHTML = top.map(({ ibge, nome }) => `
-    <div class="busca-item" data-ibge="${ibge}" data-nome="${nome}">
-      <span>${nome}</span>
-      <span class="ibge">${ibge}</span>
-    </div>
-  `).join("");
+      reaplicarEstilos();
+    }
 
-  listaBusca.querySelectorAll(".busca-item").forEach(el => {
-    el.addEventListener("click", () => {
-      const ibge  = el.dataset.ibge;
-      const nome  = el.dataset.nome;
-      const layer = featureLayers[ibge];
-      if (layer) selecionarMunicipio(ibge, nome, layer);
-      inputBusca.value = nome;
-      fecharBusca();
+    function limparFiltro(qual) {
+      filtros[qual] = null;
+      document.getElementById(`filtro-${qual}-limpar`).classList.remove("visivel");
+      document.querySelectorAll(`.legenda-item[data-qual="${qual}"]`).forEach(el => {
+        el.classList.remove("ativo", "inativo");
+      });
+      reaplicarEstilos();
+    }
+
+    function reaplicarEstilos() {
+      if (geojsonLayer) {
+        geojsonLayer.eachLayer(layer => {
+          if (!layer.feature) return;
+          const { ibge } = extrairPropriedades(layer.feature.properties);
+          layer === selectedLayer
+            ? aplicarEstiloSelecionado(layer, ibge)
+            : aplicarEstiloNormal(layer, ibge);
+        });
+      }
+      if (regionaisLayer) {
+        regionaisLayer.eachLayer(layer => {
+          if (!layer.feature) return;
+          const chave = chaveRegional(layer.feature.properties);
+          layer === selectedLayer
+            ? aplicarEstiloSelecionadoRegional(layer, chave)
+            : layer.setStyle(getEstiloRegional(chave));
+        });
+      }
+    }
+    // ════════════════════════════════════════════════════════════
+    // BUSCA
+    // ════════════════════════════════════════════════════════════
+    const inputBusca = document.getElementById("busca");
+    const listaBusca = document.getElementById("busca-resultados");
+
+    function fecharBusca() {
+      listaBusca.style.display = "none";
+      inputBusca.blur();
+    }
+
+    function normalizar(s) {
+      return s.toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+    }
+
+    inputBusca.addEventListener("input", function () {
+      const q = normalizar(this.value.trim());
+      listaBusca.style.display = "none";
+
+      if (q.length < 2 || !geojsonData) return;
+
+      const resultados = [];
+      geojsonData.features.forEach(f => {
+        const { ibge, nome } = extrairPropriedades(f.properties);
+        if (normalizar(nome).includes(q) || ibge.includes(q)) {
+          resultados.push({ ibge, nome });
+        }
+      });
+
+      // Regionais de Fortaleza na busca
+      if (regionaisData) {
+        regionaisData.features.forEach(f => {
+          const chave = chaveRegional(f.properties);
+          if (chave && normalizar(chave).includes(q)) {
+            resultados.push({ ibge: null, nome: chave, isRegional: true });
+          }
+        });
+      }
+
+      resultados.sort((a, b) => a.nome.localeCompare(b.nome));
+      const top = resultados.slice(0, 10);
+
+      if (!top.length) return;
+
+      listaBusca.innerHTML = top.map(({ ibge, nome }) => `
+        <div class="busca-item" data-ibge="${ibge}" data-nome="${nome}">
+          <span>${nome}</span>
+          <span class="ibge">${ibge}</span>
+        </div>
+      `).join("");
+
+      listaBusca.innerHTML = top.map(({ ibge, nome, isRegional }) => `
+        <div class="busca-item" data-ibge="${ibge || ''}" data-nome="${nome}" data-regional="${isRegional || false}">
+          <span>${nome}</span>
+          <span class="ibge">${isRegional ? 'Regional' : ibge}</span>
+        </div>
+      `).join("");
+
+      listaBusca.querySelectorAll(".busca-item").forEach(el => {
+        el.addEventListener("click", () => {
+          const ibge = el.dataset.ibge;
+          const nome = el.dataset.nome;
+          const layer = featureLayers[ibge];
+          if (layer) selecionarMunicipio(ibge, nome, layer);
+          inputBusca.value = nome;
+          fecharBusca();
+        });
+
+        el.addEventListener("click", () => {
+          const nome = el.dataset.nome;
+          if (el.dataset.regional === "true") {
+            const layer = regionaisLayers[nome];
+            if (layer) selecionarRegional(nome, layer);
+          } else {
+            const ibge = el.dataset.ibge;
+            const layer = featureLayers[ibge];
+            if (layer) selecionarMunicipio(ibge, nome, layer);
+          }
+          inputBusca.value = nome;
+          fecharBusca();
+        });
+      });
+
+      listaBusca.style.display = "block";
     });
-  });
 
-  listaBusca.style.display = "block";
-});
+    inputBusca.addEventListener("keydown", e => {
+      if (e.key === "Escape") fecharBusca();
+    });
 
-inputBusca.addEventListener("keydown", e => {
-  if (e.key === "Escape") fecharBusca();
-});
+    document.addEventListener("click", e => {
+      if (!e.target.closest(".search-wrap")) fecharBusca();
+    });
 
-document.addEventListener("click", e => {
-  if (!e.target.closest(".search-wrap")) fecharBusca();
-});
-
-// ════════════════════════════════════════════════════════════
-// BOTÃO RELOAD
-// ════════════════════════════════════════════════════════════
-document.getElementById("btn-reload").addEventListener("click", async function() {
-  this.classList.add("loading");
-  this.disabled = true;
-  const ri = this.querySelector(".ri");
-  ri.textContent = "↻";
-
-  try {
-    const r = await fetch(`${API}/reload`, { method: "POST" });
-    const j = await r.json();
-
-    if (j.ok) {
-      await carregarDados();
-      ri.textContent = "✓";
-      setTimeout(() => { ri.textContent = "↻"; }, 1800);
-    } else {
-      alert("Erro ao recarregar:\n" + (j.erro || "desconhecido"));
+    // ════════════════════════════════════════════════════════════
+    // BOTÃO RELOAD
+    // ════════════════════════════════════════════════════════════
+    document.getElementById("btn-reload").addEventListener("click", async function () {
+      this.classList.add("loading");
+      this.disabled = true;
+      const ri = this.querySelector(".ri");
       ri.textContent = "↻";
+
+      try {
+        const r = await fetch(`${API}/reload`, { method: "POST" });
+        const j = await r.json();
+
+        if (j.ok) {
+          await carregarDados();
+          ri.textContent = "✓";
+          setTimeout(() => { ri.textContent = "↻"; }, 1800);
+        } else {
+          alert("Erro ao recarregar:\n" + (j.erro || "desconhecido"));
+          ri.textContent = "↻";
+        }
+      } catch (e) {
+        alert("Servidor indisponível:\n" + e.message);
+        ri.textContent = "↻";
+      } finally {
+        this.classList.remove("loading");
+        this.disabled = false;
+      }
+    });
+
+    // ════════════════════════════════════════════════════════════
+    // STATUS BAR
+    // ════════════════════════════════════════════════════════════
+    async function atualizarSb() {
+      try {
+        const r = await fetch(`${API}/status`);
+        const j = await r.json();
+        document.getElementById("sb-conn").innerHTML =
+          `<span class="dot-ok">●</span> Servidor ativo`;
+        document.getElementById("sb-total").textContent =
+          `${j.total_municipios} municípios`;
+        document.getElementById("sb-hora").textContent =
+          j.gerado_em ? `Atualizado ${j.gerado_em}` : "";
+      } catch {
+        setSb(false, "Servidor indisponível");
+      }
     }
-  } catch (e) {
-    alert("Servidor indisponível:\n" + e.message);
-    ri.textContent = "↻";
-  } finally {
-    this.classList.remove("loading");
-    this.disabled = false;
-  }
-});
 
-// ════════════════════════════════════════════════════════════
-// STATUS BAR
-// ════════════════════════════════════════════════════════════
-async function atualizarSb() {
-  try {
-    const r = await fetch(`${API}/status`);
-    const j = await r.json();
-    document.getElementById("sb-conn").innerHTML =
-      `<span class="dot-ok">●</span> Servidor ativo`;
-    document.getElementById("sb-total").textContent =
-      `${j.total_municipios} municípios`;
-    document.getElementById("sb-hora").textContent =
-      j.gerado_em ? `Atualizado ${j.gerado_em}` : "";
-  } catch {
-    setSb(false, "Servidor indisponível");
-  }
-}
+    function setSb(ok, msg) {
+      document.getElementById("sb-conn").innerHTML = ok
+        ? `<span class="dot-ok">●</span> Servidor ativo`
+        : `<span class="dot-err">●</span> ${msg}`;
+    }
 
-function setSb(ok, msg) {
-  document.getElementById("sb-conn").innerHTML = ok
-    ? `<span class="dot-ok">●</span> Servidor ativo`
-    : `<span class="dot-err">●</span> ${msg}`;
-}
-
-// ════════════════════════════════════════════════════════════
-// INIT
-// ════════════════════════════════════════════════════════════
-(async () => {
-  await Promise.all([carregarGeojson(), carregarDados()]);
-  renderizarLegenda();
-})();
-</script>
+    // ════════════════════════════════════════════════════════════
+    // INIT
+    // ════════════════════════════════════════════════════════════
+    (async () => {
+      await Promise.all([carregarGeojson(), carregarRegionais(), carregarDados()]);
+      renderizarLegenda();
+    })();
+  </script>
 </body>
+
 </html>
