@@ -6,7 +6,7 @@
 # Exemplos:
 #   Windows:  r"C:\Users\Nicory\OneDrive\SATEL\mapa_municipios.xlsx"
 #   Relativo: "../data/mapa_municipios.xlsx"
-PLANILHA_PATH = r"C:\Users\Satel\OneDrive - SATEL\Portal - Censo IP\Censo IP 2026.xlsm"
+PLANILHA_PATH = r"C:\Users\nicory\Downloads\Planilhas\PROJETOS - NOVO.xlsx"
 
 # Nome exato da aba que contém os dados
 PLANILHA_ABA = "tecnico"
@@ -17,7 +17,7 @@ COLUNA_STATUS      = "status"         # ex: "ativo", "pendente", "concluído"
 COLUNA_TIPO        = "tipo"           # ex: "ressalva", "normal"
 COLUNA_MUNICIPIO   = "CIDADE"         # nome do município
 COLUNA_REGIAO      = "REGIAO"         # nome da regional (ex: "Sul", "Norte")
-COLUNA_TECNICO     = "TECNICO"        # nome do técnico
+COLUNA_TECNICO     = "TÉCNICO"        # nome do técnico (com acento)
 COLUNA_OS          = "OS"             # número da Ordem de Serviço
 
 # Caminho para o GeoJSON dos municípios do Ceará exportado pelo QGIS
@@ -38,10 +38,15 @@ SERVER_PORT = 5000
 # Municípios sem dado na planilha aparecem em CINZA automaticamente
 # =============================================================================
 STATUS_CORES = {
-    "CADASTRO FINALIZADO": "#1D9E75",   # verde
-    "EM ANDAMENTO":        "#CAA800",   # amarelo
-    "CAMPO PARALISADO":    "#CB7841",   # laranja
-    "NAO INICIADO":        "#E24B4A",   # vermelho
+    "CONCLUÍDO": "#22c55e",
+    "CANCELADO": "#ef4444",
+    "REMOTO": "#3b82f6",
+    "RETIRADO": "#f97316",
+    "PROGRAMADA": "#a855f7",
+    "EM ESPERA": "#eab308",
+    "SUSPENSO": "#64748b",
+    "IMPRODUTIVO": "#dc2626",
+    "NÃO TRATADO": "#94a3b8",
 }
 
 # Cor para municípios sem dado na planilha
