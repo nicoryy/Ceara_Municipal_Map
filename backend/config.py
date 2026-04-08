@@ -12,13 +12,19 @@ PLANILHA_PATH = r"C:\Users\Satel\OneDrive - SATEL\Portal - Censo IP\Censo IP 202
 PLANILHA_ABA = "tecnico"
 
 # Nome exato das colunas na planilha
-COLUNA_CODIGO_IBGE = "codigo_ibge"   # deve conter o código de 7 dígitos ex: 2304400
-COLUNA_STATUS      = "status"        # ex: "ativo", "pendente", "concluído"
-COLUNA_TIPO        = "tipo"          # ex: "ressalva", "normal"
-COLUNA_MUNICIPIO   = "MUNICIPIO"     # ex: "FORTALEZA - REGIONAL 1" (usado pelas regionais)
+COLUNA_CODIGO_IBGE = "cod_ibge"      # código de 7 dígitos ex: 2304400
+COLUNA_STATUS      = "status"         # ex: "ativo", "pendente", "concluído"
+COLUNA_TIPO        = "tipo"           # ex: "ressalva", "normal"
+COLUNA_MUNICIPIO   = "CIDADE"         # nome do município
+COLUNA_REGIAO      = "REGIAO"         # nome da regional (ex: "Sul", "Norte")
+COLUNA_TECNICO     = "TECNICO"        # nome do técnico
+COLUNA_OS          = "OS"             # número da Ordem de Serviço
 
-# Caminho para o GeoJSON do Ceará exportado pelo QGIS
+# Caminho para o GeoJSON dos municípios do Ceará exportado pelo QGIS
 GEOJSON_PATH = "../frontend/municipios_ce.geojson"
+
+# Caminho para o GeoJSON das regionais do Ceará (COELCE 2006)
+GEOJSON_REGIONAIS_PATH = "../frontend/regionais_ce.geojson"
 
 # Caminho para o cache gerado automaticamente pelo servidor
 CACHE_PATH = "../data/cache_dados.json"
@@ -32,12 +38,10 @@ SERVER_PORT = 5000
 # Municípios sem dado na planilha aparecem em CINZA automaticamente
 # =============================================================================
 STATUS_CORES = {
-    # "valor_na_planilha": "cor_hex",
     "CADASTRO FINALIZADO": "#1D9E75",   # verde
-    "EM ANDAMENTO":   "#CAA800",   # amarelo
-    "CAMPO PARALISADO":  "#CB7841",   # azul
-    "NAO INICIADO":  "#E24B4A",   # vermelho
-    # Adicione mais conforme necessário...
+    "EM ANDAMENTO":        "#CAA800",   # amarelo
+    "CAMPO PARALISADO":    "#CB7841",   # laranja
+    "NAO INICIADO":        "#E24B4A",   # vermelho
 }
 
 # Cor para municípios sem dado na planilha

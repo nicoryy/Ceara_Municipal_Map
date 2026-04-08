@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mapa Municipal — Ceará</title>
+  <title>Mapa Municipal — Ceará (Projetos)</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     *,
@@ -24,7 +24,7 @@
       --muted: #8b8fa8;
       --accent: #7c6ff7;
       --radius: 10px;
-      --panel-w: 280px;
+      --panel-w: 300px;
       --header-h: 54px;
     }
 
@@ -88,16 +88,6 @@
 
     #busca::placeholder {
       color: var(--muted);
-    }
-
-    .search-icon {
-      position: absolute;
-      left: 10px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: var(--muted);
-      pointer-events: none;
-      font-size: 14px;
     }
 
     #busca-resultados {
@@ -206,9 +196,10 @@
       border-radius: 7px !important;
       color: var(--text) !important;
       font-size: 12px !important;
-      padding: 6px 10px !important;
+      padding: 8px 12px !important;
       box-shadow: 0 4px 14px rgba(0, 0, 0, .5) !important;
       pointer-events: none !important;
+      max-width: 280px !important;
     }
 
     .leaflet-tooltip::before {
@@ -218,7 +209,7 @@
     .tt-nome {
       font-weight: 600;
       font-size: 13px;
-      margin-bottom: 2px;
+      margin-bottom: 4px;
     }
 
     .tt-ibge {
@@ -242,6 +233,25 @@
       flex-shrink: 0;
     }
 
+    .tt-resumo {
+      margin-top: 6px;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .tt-resumo-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 2px 0;
+    }
+
+    .tt-resumo-divider {
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 1px solid var(--border);
+    }
+
     /* ── painel lateral ── */
     #painel {
       width: var(--panel-w);
@@ -249,7 +259,7 @@
       border-left: 1px solid var(--border);
       display: flex;
       flex-direction: column;
-      overflow: hidden;
+      overflow-y: auto;
       flex-shrink: 0;
     }
 
@@ -333,11 +343,97 @@
       font-family: monospace;
     }
 
-    /* ── card município ── */
-    #card-municipio {
+    /* ── seção de filtros avançados ── */
+    #filtros-avancados {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .filtro-toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .filtro-toggle-label {
+      font-size: 12px;
+      color: var(--text);
+      flex: 1;
+    }
+
+    .filtro-switch {
+      position: relative;
+      width: 36px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+
+    .filtro-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .filtro-switch-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: var(--surface2);
+      border: 1px solid var(--border);
+      transition: .3s;
+      border-radius: 20px;
+    }
+
+    .filtro-switch-slider:before {
+      position: absolute;
+      content: "";
+      height: 14px;
+      width: 14px;
+      left: 2px;
+      bottom: 2px;
+      background-color: var(--text);
+      transition: .3s;
+      border-radius: 50%;
+    }
+
+    .filtro-switch input:checked + .filtro-switch-slider {
+      background-color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .filtro-switch input:checked + .filtro-switch-slider:before {
+      transform: translateX(16px);
+    }
+
+    .filtro-dropdown {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      color: var(--text);
+      font-size: 12px;
+      padding: 6px 8px;
+      margin-bottom: 6px;
+      outline: none;
+    }
+
+    .filtro-dropdown:focus {
+      border-color: var(--accent);
+    }
+
+    .filtro-dropdown option {
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    /* ── card município / regional ── */
+    #card-detalhes {
       padding: 16px;
       flex: 1;
-      overflow-y: auto;
     }
 
     .placeholder {
@@ -361,10 +457,9 @@
       margin-bottom: 3px;
     }
 
-    .mun-ibge {
+    .mun-subtitulo {
       font-size: 11px;
       color: var(--muted);
-      font-family: monospace;
       margin-bottom: 14px;
     }
 
@@ -382,6 +477,30 @@
       width: 8px;
       height: 8px;
       border-radius: 50%;
+    }
+
+    .mun-info-row {
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .mun-info-row span {
+      color: var(--text);
+    }
+
+    .mun-resumo-status {
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+    }
+
+    .mun-resumo-status-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      padding: 3px 0;
     }
 
     .sem-dado {
@@ -417,11 +536,11 @@
 <body>
 
   <header>
-    <h1>Mapa Municipal <span>/ Ceará</span></h1>
+    <h1>Mapa Municipal <span>/ Ceará — Projetos</span></h1>
 
     <div class="search-wrap">
       <span class="search-icon">⌕</span>
-      <input id="busca" type="text" placeholder="Buscar município..." autocomplete="off">
+      <input id="busca" type="text" placeholder="Buscar município ou regional..." autocomplete="off">
       <div id="busca-resultados"></div>
     </div>
 
@@ -436,21 +555,41 @@
 
     <div id="painel">
       <div class="painel-titulo">
-        Status
+        Status (Filtro)
         <span class="filtro-limpar" id="filtro-status-limpar" onclick="limparFiltro('status')">Limpar</span>
       </div>
       <div id="legenda-lista"></div>
 
       <div class="painel-titulo" style="margin-top:0">
-        Tipo
+        Tipo (Filtro)
         <span class="filtro-limpar" id="filtro-tipo-limpar" onclick="limparFiltro('tipo')">Limpar</span>
       </div>
       <div id="tipo-lista"></div>
 
-      <div id="card-municipio">
+      <div class="painel-titulo">
+        Filtros Regionais
+        <span class="filtro-limpar" id="filtro-regionais-limpar" onclick="limparFiltrosRegionais()">Limpar</span>
+      </div>
+      <div id="filtros-avancados">
+        <div class="filtro-toggle-row">
+          <span class="filtro-toggle-label">Mostrar Regionais</span>
+          <label class="filtro-switch">
+            <input type="checkbox" id="toggle-regionais" checked onchange="toggleRegionais()">
+            <span class="filtro-switch-slider"></span>
+          </label>
+        </div>
+        <select id="filtro-status-regional" class="filtro-dropdown" onchange="aplicarFiltroStatusRegional()">
+          <option value="">Todos os status</option>
+        </select>
+        <select id="filtro-tecnico-regional" class="filtro-dropdown" onchange="aplicarFiltroTecnicoRegional()">
+          <option value="">Todos os técnicos</option>
+        </select>
+      </div>
+
+      <div id="card-detalhes">
         <div class="placeholder">
           <em>🗺️</em>
-          Clique em um município<br>para ver detalhes
+          Clique em um município ou regional<br>para ver detalhes
         </div>
       </div>
     </div>
@@ -472,16 +611,22 @@
     // ════════════════════════════════════════════════════════════
     // ESTADO
     // ════════════════════════════════════════════════════════════
-    let dadosPlanilha = {};      // { "2304400": { status, cor } }
+    let dadosPlanilha = {};        // { "2304400": { status, cor, tipo, municipio, regiao, os[], tecnicos[], resumo_status{} } }
+    let dadosRegionais = {};       // { "Sul": { regiao, cor, status, os[], tecnicos[], resumo_status{}, total_os, total_tecnicos, municipios[] } }
     let geojsonData = null;
     let geojsonLayer = null;
-    let featureLayers = {};      // { ibge: leaflet_layer }
+    let featureLayers = {};        // { ibge: leaflet_layer }
+    let regionaisCeData = null;
+    let regionaisCeLayer = null;
+    let regionaisCeFeatureLayers = {};  // { "Sul": layer }
     let selectedLayer = null;
-    let selectedIbge = null;
-    let regionaisLayer = null;
-    let regionaisData = null;
-    let regionaisLayers = {};  // { "FORTALEZA - REGIONAL 1": layer }
-    let filtros = { status: null, tipo: null };    // status selecionado na legenda, ou null
+    let selectedKey = null;        // ibge ou nome da regional
+    let selectedType = null;       // "municipio" ou "regional"
+    let layerRegionaisVisivel = true;
+    let filtros = { status: null, tipo: null };
+    let filtroStatusRegional = "";
+    let filtroTecnicoRegional = "";
+    let listaTodosTecnicos = [];
 
     // ════════════════════════════════════════════════════════════
     // MAPA
@@ -497,8 +642,35 @@
     map.fitBounds(CE_BOUNDS);
     map.setMaxBounds(CE_BOUNDS.pad(0.35));
 
-    // Fecha busca ao mover o mapa
     map.on("click", () => fecharBusca());
+
+    // ════════════════════════════════════════════════════════════
+    // FUNÇÕES AUXILIARES
+    // ════════════════════════════════════════════════════════════
+    function extrairPropriedades(props) {
+      const ibge = String(
+        props.codigo_ibg ||
+        props.CD_MUN ||
+        props.codigo_ibge ||
+        props.geocodigo ||
+        props.CD_GEOCMU ||
+        props.GEOCODIGO || ""
+      ).trim().replace(/\.0$/, "").padStart(7, "0");
+
+      const nome = props.Municipio ||
+        props.NM_MUN ||
+        props.nome ||
+        props.NOME ||
+        props.NM_MUNICIPIO || ibge;
+
+      return { ibge, nome };
+    }
+
+    function chaveRegionalCe(props) {
+      const regional = String(props.Regional || "").trim();
+      if (!regional) return null;
+      return regional;
+    }
 
     // ════════════════════════════════════════════════════════════
     // ESTILO
@@ -523,142 +695,129 @@
       };
     }
 
-    function getEstiloRegional(chave, opcoes = {}) {
-      const dado = chave ? dadosPorMunicipio[chave] : null;
+    function getEstiloRegionalCe(chave, opcoes = {}) {
+      const dado = chave ? dadosRegionais[chave] : null;
       const cor = dado ? dado.cor : "#1e2236";
-
       const status = dado ? dado.status : "";
-      const tipo = dado ? dado.tipo : "";
-      const apagado = (
-        (filtros.status !== null && status !== filtros.status) ||
-        (filtros.tipo !== null && tipo !== filtros.tipo)
-      );
+
+      // Filtro por status regional
+      const apagadoStatus = (filtroStatusRegional && status !== filtroStatusRegional);
+
+      // Filtro por técnico regional
+      const tecnicos = dado ? dado.tecnicos : [];
+      const apagadoTecnico = (filtroTecnicoRegional && !tecnicos.includes(filtroTecnicoRegional));
+
+      const apagado = apagadoStatus || apagadoTecnico;
 
       return {
         fillColor: cor,
-        fillOpacity: apagado ? 0.08 : (opcoes.hover ? 0.92 : opcoes.selected ? 1 : 0.72),
+        fillOpacity: apagado ? 0.08 : (opcoes.hover ? 0.92 : opcoes.selected ? 1 : 0.78),
         color: opcoes.selected ? "#7c6ff7" : "#0a0d16",
-        weight: opcoes.selected ? 2.2 : opcoes.hover ? 1.4 : 0.6,
+        weight: opcoes.selected ? 2.2 : opcoes.hover ? 1.6 : 0.8,
         opacity: apagado ? 0.3 : 1,
       };
     }
 
-    function aplicarEstiloSelecionadoRegional(layer, chave) {
-      layer.setStyle(getEstiloRegional(chave, { selected: true }));
-    }
-
-    function selecionarRegional(chave, layer) {
-      if (selectedLayer && selectedLayer !== layer) {
-        // Reset anterior — pode ser município ou regional
-        if (selectedLayer.feature) {
-          const props = selectedLayer.feature.properties;
-          if (props.regiao_adm !== undefined) {
-            regionaisLayer.resetStyle(selectedLayer);
-            const chaveAnt = chaveRegional(props);
-            selectedLayer.setStyle(getEstiloRegional(chaveAnt));
-          } else {
-            const { ibge } = extrairPropriedades(props);
-            aplicarEstiloNormal(selectedLayer, ibge);
-          }
-        }
-      }
-
-      selectedLayer = layer;
-      selectedIbge = null;
-      aplicarEstiloSelecionadoRegional(layer, chave);
-
-      map.flyToBounds(layer.getBounds(), { padding: [80, 80], duration: 0.5, maxZoom: 12 });
-
-      const dado = dadosPorMunicipio[chave];
+    // ════════════════════════════════════════════════════════════
+    // TOOLTIPS
+    // ════════════════════════════════════════════════════════════
+    function montarTooltipMunicipio(dado, nome, ibge) {
       const status = dado ? dado.status : "";
       const cor = dado ? dado.cor : "";
       const tipo = dado ? dado.tipo : "";
+      const tecnicos = dado ? dado.tecnicos : [];
+      const resumoStatus = dado ? dado.resumo_status : {};
 
-      let html = `
-    <div class="mun-nome">${chave}</div>
-    <div class="mun-ibge" style="font-family:inherit">Regional de Fortaleza</div>
-  `;
-
+      let statusHtml = "";
       if (status) {
-        html += `
-      <div class="mun-badge" style="background:${cor}22;color:${cor};border:1px solid ${cor}55;margin-top:14px">
-        <span class="dot" style="background:${cor}"></span>${status}
-      </div>
-    `;
+        statusHtml = `<div class="tt-status">
+          <span class="tt-dot" style="background:${cor}"></span>
+          ${status}${tipo ? ` · ${tipo}` : ""}
+        </div>`;
       } else {
-        html += `<div class="sem-dado" style="margin-top:14px">Sem dado na planilha</div>`;
+        statusHtml = `<div class="tt-status" style="color:#8b8fa8">Sem dado</div>`;
       }
 
-      if (tipo) {
-        html += `<div style="margin-top:8px;font-size:12px;color:var(--muted)">Tipo: <span style="color:var(--text)">${tipo}</span></div>`;
+      let resumoHtml = "";
+      if (tecnicos.length > 0 || Object.keys(resumoStatus).length > 0) {
+        resumoHtml = `<div class="tt-resumo">`;
+        if (tecnicos.length > 0) {
+          resumoHtml += `<div>👥 ${tecnicos.length} técnico${tecnicos.length > 1 ? 's' : ''}</div>`;
+        }
+        if (Object.keys(resumoStatus).length > 0) {
+          resumoHtml += `<div class="tt-resumo-divider">`;
+          Object.entries(resumoStatus).forEach(([st, qtd]) => {
+            const c = STATUS_CORES[st] || "#888";
+            resumoHtml += `<div class="tt-resumo-row">
+              <span class="tt-dot" style="background:${c};width:7px;height:7px"></span>
+              <span style="color:${c}">${st}: ${qtd}</span>
+            </div>`;
+          });
+          resumoHtml += `</div>`;
+        }
+        resumoHtml += `</div>`;
       }
 
-      document.getElementById("card-municipio").innerHTML = html;
+      return `<div class="tt-nome">${nome}</div>
+        <div class="tt-ibge">IBGE: ${ibge}</div>
+        ${statusHtml}
+        ${resumoHtml}`;
     }
 
-    function aplicarEstiloNormal(layer, ibge) {
-      layer.setStyle(getEstilo(ibge));
-    }
+    function montarTooltipRegionalCe(dado, nome) {
+      if (!dado) {
+        return `<div class="tt-nome">${nome}</div><div class="tt-status" style="color:#8b8fa8">Sem dado</div>`;
+      }
 
-    function aplicarEstiloHover(layer, ibge) {
-      if (layer === selectedLayer) return;
-      layer.setStyle(getEstilo(ibge, { hover: true }));
-    }
+      const status = dado.status || "";
+      const cor = dado.cor || "";
+      const totalTecnicos = dado.total_tecnicos || 0;
+      const totalOs = dado.total_os || 0;
+      const resumoStatus = dado.resumo_status || {};
 
-    function aplicarEstiloSelecionado(layer, ibge) {
-      layer.setStyle(getEstilo(ibge, { selected: true }));
-    }
+      let resumoHtml = `<div class="tt-resumo">`;
+      resumoHtml += `<div>👥 ${totalTecnicos} técnico${totalTecnicos !== 1 ? 's' : ''}</div>`;
+      resumoHtml += `<div>📋 ${totalOs} OS${totalOs !== 1 ? '' : ''}</div>`;
 
-    function buscarDadoRegional(chave) {
-      return dadosPorMunicipio[chave] || null;
+      if (Object.keys(resumoStatus).length > 0) {
+        resumoHtml += `<div class="tt-resumo-divider">`;
+        Object.entries(resumoStatus).forEach(([st, qtd]) => {
+          const c = STATUS_CORES[st] || "#888";
+          resumoHtml += `<div class="tt-resumo-row">
+            <span class="tt-dot" style="background:${c};width:7px;height:7px"></span>
+            <span style="color:${c}">${st}: ${qtd}</span>
+          </div>`;
+        });
+        resumoHtml += `</div>`;
+      }
+      resumoHtml += `</div>`;
+
+      return `<div class="tt-nome">${nome}</div>
+        <div class="tt-status"><span class="tt-dot" style="background:${cor}"></span>${status}</div>
+        ${resumoHtml}`;
     }
 
     // ════════════════════════════════════════════════════════════
-    // GEOJSON
+    // STATUS_CORES (local copy)
     // ════════════════════════════════════════════════════════════
+    const STATUS_CORES = {
+      "CADASTRO FINALIZADO": "#1D9E75",
+      "EM ANDAMENTO":        "#CAA800",
+      "CAMPO PARALISADO":    "#CB7841",
+      "NAO INICIADO":        "#E24B4A",
+    };
+    const COR_SEM_DADO = "#B4B2A9";
 
-    function chaveRegional(props) {
-      // regiao_adm vem como "SER 1", "SER 11" etc.
-      const ser = String(props.regiao_adm || "").trim();
-      const num = ser.replace(/^SER\s*/i, "").trim();
-      if (!num) return null;
-      return `FORTALEZA - REGIONAL ${num}`;
-    }
-
-    function extrairPropriedades(props) {
-      const ibge = String(
-        props.codigo_ibg ||   // ← campo real do seu GeoJSON (QGIS truncou)
-        props.CD_MUN ||
-        props.codigo_ibge ||
-        props.geocodigo ||
-        props.CD_GEOCMU ||
-        props.GEOCODIGO || ""
-      ).trim().replace(/\.0$/, "").padStart(7, "0");
-
-      const nome = props.Municipio ||   // ← campo real do seu GeoJSON
-        props.NM_MUN ||
-        props.nome ||
-        props.NOME ||
-        props.NM_MUNICIPIO || ibge;
-
-      return { ibge, nome };
-    }
-
-    async function carregarGeojson() {
+    // ════════════════════════════════════════════════════════════
+    // GEOJSON — MUNICÍPIOS
+    // ════════════════════════════════════════════════════════════
+    async function carregarGeojsonMunicipios() {
       try {
         const r = await fetch("/municipios_ce.geojson");
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         geojsonData = await r.json();
 
-        const IBGE_FORTALEZA = "2304400";
-        const featuresFiltered = {
-          ...geojsonData,
-          features: geojsonData.features.filter(f => {
-            const { ibge } = extrairPropriedades(f.properties);
-            return ibge !== IBGE_FORTALEZA;
-          }),
-        };
-        geojsonLayer = L.geoJSON(featuresFiltered, {
+        geojsonLayer = L.geoJSON(geojsonData, {
           style: f => {
             const { ibge } = extrairPropriedades(f.properties);
             return getEstilo(ibge);
@@ -667,40 +826,19 @@
             const { ibge, nome } = extrairPropriedades(feature.properties);
             featureLayers[ibge] = layer;
 
-            // ── hover ──────────────────────────────────────────
             layer.on("mouseover", function (e) {
-              aplicarEstiloHover(this, ibge);
-
+              if (this !== selectedLayer) this.setStyle(getEstilo(ibge, { hover: true }));
               const dado = dadosPlanilha[ibge];
-              const status = dado ? dado.status : "";
-              const cor = dado ? dado.cor : "";
-              const tipo = dado ? dado.tipo : "";
-
-              const statusHtml = status
-                ? `<div class="tt-status">
-                <span class="tt-dot" style="background:${cor}"></span>
-                ${status}${tipo ? ` · ${tipo}` : ""}
-              </div>`
-                : `<div class="tt-status" style="color:#8b8fa8">Sem dado</div>`;
-
-              this.bindTooltip(
-                `<div class="tt-nome">${nome}</div>
-             <div class="tt-ibge">${ibge}</div>
-             ${statusHtml}`,
-                { sticky: true, direction: "top", offset: [0, -6], opacity: 1 }
-              ).openTooltip(e.latlng);
+              this.bindTooltip(montarTooltipMunicipio(dado, nome, ibge), {
+                sticky: true, direction: "top", offset: [0, -6], opacity: 1
+              }).openTooltip(e.latlng);
             });
 
-            // ── mouseout ────────────────────────────────────────
             layer.on("mouseout", function () {
-              // Só reseta se não for o selecionado
-              if (this !== selectedLayer) {
-                aplicarEstiloNormal(this, ibge);
-              }
+              if (this !== selectedLayer) this.setStyle(getEstilo(ibge));
               this.closeTooltip();
             });
 
-            // ── click ───────────────────────────────────────────
             layer.on("click", function () {
               selecionarMunicipio(ibge, nome, this);
             });
@@ -708,103 +846,242 @@
         }).addTo(map);
 
         map.fitBounds(geojsonLayer.getBounds());
-
       } catch (e) {
-        console.error("GeoJSON:", e);
-        setSb(false, "GeoJSON não encontrado em frontend/municipios_ce.geojson");
+        console.error("GeoJSON municípios:", e);
+        setSb(false, "GeoJSON não encontrado");
       }
     }
 
-    async function carregarRegionais() {
+    // ════════════════════════════════════════════════════════════
+    // GEOJSON — REGIONAIS CE
+    // ════════════════════════════════════════════════════════════
+    async function carregarRegionaisCe() {
       try {
-        const r = await fetch("/limites_regionais_fortaleza.geojson");
+        const r = await fetch("/regionais_ce.geojson");
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        regionaisData = await r.json();
+        regionaisCeData = await r.json();
 
-        regionaisLayer = L.geoJSON(regionaisData, {
+        regionaisCeLayer = L.geoJSON(regionaisCeData, {
           style: f => {
-            const chave = chaveRegional(f.properties);
-            return getEstiloRegional(chave);
+            const chave = chaveRegionalCe(f.properties);
+            return getEstiloRegionalCe(chave);
           },
           onEachFeature: (feature, layer) => {
-            const props = feature.properties;
-            const chave = chaveRegional(props);
+            const chave = chaveRegionalCe(feature.properties);
             if (!chave) return;
-            regionaisLayers[chave] = layer;
+            regionaisCeFeatureLayers[chave] = layer;
 
             layer.on("mouseover", function (e) {
-              if (this !== selectedLayer) this.setStyle({ fillOpacity: 0.92, weight: 1.8, color: "#ffffff" });
-              const dado = buscarDadoRegional(chave);
-              const status = dado ? dado.status : "";
-              const cor = dado ? dado.cor : "";
-              const statusHtml = status
-                ? `<div class="tt-status"><span class="tt-dot" style="background:${cor}"></span>${status}${dado.tipo ? ` · ${dado.tipo}` : ""}</div>`
-                : `<div class="tt-status" style="color:#8b8fa8">Sem dado</div>`;
-              this.bindTooltip(
-                `<div class="tt-nome">${chave}</div>${statusHtml}`,
-                { sticky: true, direction: "top", offset: [0, -6], opacity: 1 }
-              ).openTooltip(e.latlng);
+              if (this !== selectedLayer) this.setStyle(getEstiloRegionalCe(chave, { hover: true }));
+              const dado = dadosRegionais[chave];
+              this.bindTooltip(montarTooltipRegionalCe(dado, chave), {
+                sticky: true, direction: "top", offset: [0, -6], opacity: 1
+              }).openTooltip(e.latlng);
             });
 
             layer.on("mouseout", function () {
-              if (this !== selectedLayer) regionaisLayer.resetStyle(this);
+              if (this !== selectedLayer) this.setStyle(getEstiloRegionalCe(chave));
               this.closeTooltip();
             });
 
             layer.on("click", function () {
-              selecionarRegional(chave, this);
+              selecionarRegionalCe(chave, this);
             });
           },
         }).addTo(map);
 
+        // Controla visibilidade
+        if (!layerRegionaisVisivel) {
+          map.removeLayer(regionaisCeLayer);
+        }
       } catch (e) {
-        console.error("Regionais GeoJSON:", e);
+        console.error("Regionais CE GeoJSON:", e);
       }
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // SELEÇÃO
+    // ════════════════════════════════════════════════════════════
+    function selecionarMunicipio(ibge, nome, layer) {
+      if (selectedLayer && selectedLayer !== layer) {
+        if (selectedType === "municipio") {
+          aplicarEstiloNormal(selectedLayer, selectedKey);
+        } else if (selectedType === "regional") {
+          regionaisCeLayer.resetStyle(selectedLayer);
+          selectedLayer.setStyle(getEstiloRegionalCe(selectedKey));
+        }
+      }
+
+      selectedLayer = layer;
+      selectedKey = ibge;
+      selectedType = "municipio";
+      layer.setStyle(getEstilo(ibge, { selected: true }));
+
+      map.flyToBounds(layer.getBounds(), { padding: [80, 80], duration: 0.6, maxZoom: 10 });
+
+      const dado = dadosPlanilha[ibge];
+      const status = dado ? dado.status : "";
+      const cor = dado ? dado.cor : "";
+      const tipo = dado ? dado.tipo : "";
+      const regiao = dado ? dado.regiao : "";
+      const tecnicos = dado ? dado.tecnicos : [];
+      const resumoStatus = dado ? dado.resumo_status : {};
+
+      let html = `<div class="mun-nome">${nome}</div>
+        <div class="mun-subtitulo">IBGE: ${ibge}${regiao ? ` · Regional ${regiao}` : ""}</div>`;
+
+      if (status) {
+        html += `<div class="mun-badge" style="background:${cor}22; color:${cor}; border:1px solid ${cor}55">
+          <span class="dot" style="background:${cor}"></span>${status}
+        </div>`;
+      }
+
+      if (tipo) {
+        html += `<div class="mun-info-row">Tipo: <span>${tipo}</span></div>`;
+      }
+
+      if (tecnicos.length > 0) {
+        html += `<div class="mun-info-row">Técnicos: <span>${tecnicos.join(", ")}</span></div>`;
+      }
+
+      if (Object.keys(resumoStatus).length > 0) {
+        html += `<div class="mun-resumo-status">`;
+        Object.entries(resumoStatus).forEach(([st, qtd]) => {
+          const c = STATUS_CORES[st] || "#888";
+          html += `<div class="mun-resumo-status-item">
+            <span class="dot" style="background:${c}"></span>
+            <span style="color:${c}">${st}: ${qtd}</span>
+          </div>`;
+        });
+        html += `</div>`;
+      }
+
+      if (!status && !tipo && tecnicos.length === 0) {
+        html += `<div class="sem-dado">Sem dado na planilha</div>`;
+      }
+
+      document.getElementById("card-detalhes").innerHTML = html;
+    }
+
+    function selecionarRegionalCe(nome, layer) {
+      if (selectedLayer && selectedLayer !== layer) {
+        if (selectedType === "municipio") {
+          aplicarEstiloNormal(selectedLayer, selectedKey);
+        } else if (selectedType === "regional") {
+          regionaisCeLayer.resetStyle(selectedLayer);
+          selectedLayer.setStyle(getEstiloRegionalCe(selectedKey));
+        }
+      }
+
+      selectedLayer = layer;
+      selectedKey = nome;
+      selectedType = "regional";
+      layer.setStyle(getEstiloRegionalCe(nome, { selected: true }));
+
+      map.flyToBounds(layer.getBounds(), { padding: [80, 80], duration: 0.5, maxZoom: 12 });
+
+      const dado = dadosRegionais[nome];
+      if (!dado) {
+        document.getElementById("card-detalhes").innerHTML = `
+          <div class="mun-nome">${nome}</div>
+          <div class="mun-subtitulo">Regional do Ceará</div>
+          <div class="sem-dado">Sem dado na planilha</div>`;
+        return;
+      }
+
+      const status = dado.status || "";
+      const cor = dado.cor || "";
+      const totalTecnicos = dado.total_tecnicos || 0;
+      const totalOs = dado.total_os || 0;
+      const resumoStatus = dado.resumo_status || {};
+      const tecnicos = dado.tecnicos || [];
+      const municipios = dado.municipios || [];
+
+      let html = `<div class="mun-nome">${nome}</div>
+        <div class="mun-subtitulo">Regional do Ceará</div>`;
+
+      if (status) {
+        html += `<div class="mun-badge" style="background:${cor}22; color:${cor}; border:1px solid ${cor}55">
+          <span class="dot" style="background:${cor}"></span>${status}
+        </div>`;
+      }
+
+      html += `<div class="mun-info-row">Técnicos: <span>${totalTecnicos}</span></div>`;
+      html += `<div class="mun-info-row">OS: <span>${totalOs}</span></div>`;
+      html += `<div class="mun-info-row">Municípios: <span>${municipios.length}</span></div>`;
+
+      if (tecnicos.length > 0) {
+        html += `<div class="mun-info-row" style="margin-top:6px"><span style="font-size:11px">${tecnicos.join(", ")}</span></div>`;
+      }
+
+      if (Object.keys(resumoStatus).length > 0) {
+        html += `<div class="mun-resumo-status">`;
+        Object.entries(resumoStatus).forEach(([st, qtd]) => {
+          const c = STATUS_CORES[st] || "#888";
+          html += `<div class="mun-resumo-status-item">
+            <span class="dot" style="background:${c}"></span>
+            <span style="color:${c}">${st}: ${qtd}</span>
+          </div>`;
+        });
+        html += `</div>`;
+      }
+
+      document.getElementById("card-detalhes").innerHTML = html;
+    }
+
+    function aplicarEstiloNormal(layer, ibge) {
+      layer.setStyle(getEstilo(ibge));
     }
 
     // ════════════════════════════════════════════════════════════
     // DADOS DA API
     // ════════════════════════════════════════════════════════════
-    // Índice secundário: { "FORTALEZA - REGIONAL 1": { status, cor, tipo, municipio } }
-    let dadosPorMunicipio = {};
-
     async function carregarDados() {
       try {
-        const r = await fetch(`${API}/municipios`);
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        dadosPlanilha = await r.json();
+        const [rMun, rReg] = await Promise.all([
+          fetch(`${API}/municipios`),
+          fetch(`${API}/regionais`)
+        ]);
 
-        // Monta índice por nome de município (para regionais)
-        dadosPorMunicipio = {};
-        Object.values(dadosPlanilha).forEach(d => {
-          if (d.municipio) dadosPorMunicipio[d.municipio] = d;
-        });
+        if (!rMun.ok || !rReg.ok) throw new Error("API indisponível");
 
-        // Atualiza estilos
+        dadosPlanilha = await rMun.json();
+        dadosRegionais = await rReg.json();
+
+        // Extrai lista única de técnicos para o filtro
+        listaTodosTecnicos = [...new Set(
+          Object.values(dadosRegionais).flatMap(d => d.tecnicos || [])
+        )].sort();
+
+        // Atualiza estilos municípios
         if (geojsonLayer) {
           geojsonLayer.eachLayer(layer => {
             if (!layer.feature) return;
             const { ibge } = extrairPropriedades(layer.feature.properties);
-            layer === selectedLayer
-              ? aplicarEstiloSelecionado(layer, ibge)
-              : aplicarEstiloNormal(layer, ibge);
+            if (layer === selectedLayer && selectedType === "municipio") {
+              layer.setStyle(getEstilo(ibge, { selected: true }));
+            } else {
+              layer.setStyle(getEstilo(ibge));
+            }
           });
         }
 
-        if (regionaisLayer) {
-          regionaisLayer.eachLayer(layer => {
+        // Atualiza estilos regionais
+        if (regionaisCeLayer) {
+          regionaisCeLayer.eachLayer(layer => {
             if (!layer.feature) return;
-            const chave = chaveRegional(layer.feature.properties);
+            const chave = chaveRegionalCe(layer.feature.properties);
             if (!chave) return;
-            layer === selectedLayer
-              ? aplicarEstiloSelecionadoRegional(layer, chave)
-              : regionaisLayer.resetStyle(layer);
-            // Reaplicar estilo correto
-            layer.setStyle(getEstiloRegional(chave));
+            if (layer === selectedLayer && selectedType === "regional") {
+              layer.setStyle(getEstiloRegionalCe(chave, { selected: true }));
+            } else {
+              layer.setStyle(getEstiloRegionalCe(chave));
+            }
           });
         }
 
         renderizarLegenda();
+        renderizarFiltrosRegionais();
         await atualizarSb();
         return true;
       } catch (e) {
@@ -813,52 +1090,9 @@
         return false;
       }
     }
-    // ════════════════════════════════════════════════════════════
-    // SELEÇÃO DE MUNICÍPIO
-    // ════════════════════════════════════════════════════════════
-    function selecionarMunicipio(ibge, nome, layer) {
-      // Remove seleção anterior
-      if (selectedLayer && selectedLayer !== layer) {
-        const ibgeAnterior = selectedIbge;
-        aplicarEstiloNormal(selectedLayer, ibgeAnterior);
-      }
-
-      selectedLayer = layer;
-      selectedIbge = ibge;
-      aplicarEstiloSelecionado(layer, ibge);
-
-      map.flyToBounds(layer.getBounds(), { padding: [80, 80], duration: 0.6, maxZoom: 10 });
-
-      const dado = dadosPlanilha[ibge];
-      const status = dado ? dado.status : "";
-      const cor = dado ? dado.cor : "";
-      const tipo = dado ? dado.tipo : "";
-
-      let html = `
-    <div class="mun-nome">${nome}</div>
-    <div class="mun-ibge">IBGE: ${ibge}</div>
-  `;
-
-      if (status) {
-        html += `
-      <div class="mun-badge" style="background:${cor}22; color:${cor}; border:1px solid ${cor}55">
-        <span class="dot" style="background:${cor}"></span>
-        ${status}
-      </div>
-    `;
-      }
-
-      else if (tipo) {
-        html += `<div style="margin-top:8px;font-size:12px;color:var(--muted)">Tipo: <span style="color:var(--text)">${tipo}</span></div>`;
-      } else {
-        html += `<div class="sem-dado">Sem dado na planilha</div>`;
-      }
-
-      document.getElementById("card-municipio").innerHTML = html;
-    }
 
     // ════════════════════════════════════════════════════════════
-    // LEGENDA / FILTRO
+    // LEGENDA / FILTROS COMPARTILHADOS
     // ════════════════════════════════════════════════════════════
     function renderizarLegenda() {
       const contagem = {};
@@ -877,7 +1111,7 @@
       const container = document.getElementById("legenda-lista");
       container.innerHTML = "";
       Object.entries(contagem).forEach(([status, count]) => {
-        const cor = Object.values(dadosPlanilha).find(d => d.status === status)?.cor || "#888";
+        const cor = STATUS_CORES[status] || "#888";
         container.appendChild(criarItemFiltro("status", status, cor, count));
       });
       if (semDado > 0) {
@@ -897,64 +1131,66 @@
       container.innerHTML = "";
 
       if (Object.keys(contagem).length === 0) {
-        container.innerHTML = `<div style="padding:10px 16px;font-size:12px;color:var(--muted)">Nenhum tipo encontrado</div>`;
+        container.innerHTML = `<div style="padding:10px 12px;font-size:12px;color:var(--muted)">Sem dados de tipo</div>`;
         return;
       }
 
       Object.entries(contagem).forEach(([tipo, count]) => {
-        container.appendChild(criarItemFiltro("tipo", tipo, "var(--muted)", count));
+        container.appendChild(criarItemFiltro("tipo", tipo, "#5a5e7a", count));
       });
     }
 
-    function criarItemFiltro(qual, valor, cor, count, semDado = false) {
+    function criarItemFiltro(tipo, label, cor, count, isSemDado = false) {
       const div = document.createElement("div");
       div.className = "legenda-item";
-      div.dataset.qual = qual;
-      div.dataset.valor = valor;
-
-      // Para tipo, usa um quadrado neutro com borda colorida
-      const corEl = qual === "tipo"
-        ? `<div class="legenda-cor" style="background:var(--surface2);border:2px solid var(--accent)"></div>`
-        : `<div class="legenda-cor" style="background:${cor}"></div>`;
+      const ativo = tipo === "status" ? filtros.status === label || (filtros.status === null && isSemDado) : filtros.tipo === label;
+      if (ativo) div.classList.add("ativo");
 
       div.innerHTML = `
-    ${corEl}
-    <span class="legenda-label">${valor}</span>
-    <span class="legenda-count">${count}</span>
-  `;
+        <span class="legenda-cor" style="background:${cor}"></span>
+        <span class="legenda-label">${label}</span>
+        <span class="legenda-count">${count}</span>`;
 
-      if (!semDado) {
-        div.addEventListener("click", () => toggleFiltro(qual, valor));
-      }
+      div.onclick = () => aplicarFiltro(tipo, label);
       return div;
     }
 
-    function toggleFiltro(qual, valor) {
-      if (filtros[qual] === valor) {
-        filtros[qual] = null;
-        document.getElementById(`filtro-${qual}-limpar`).classList.remove("visivel");
+    function aplicarFiltro(tipo, label) {
+      const current = tipo === "status" ? filtros.status : filtros.tipo;
+      if (current === label) {
+        if (tipo === "status") filtros.status = null;
+        else filtros.tipo = null;
       } else {
-        filtros[qual] = valor;
-        document.getElementById(`filtro-${qual}-limpar`).classList.add("visivel");
+        if (tipo === "status") filtros.status = label;
+        else filtros.tipo = label;
       }
 
-      // Atualiza visual dos itens da seção clicada
-      document.querySelectorAll(`.legenda-item[data-qual="${qual}"]`).forEach(el => {
-        const ativo = filtros[qual] === null || el.dataset.valor === filtros[qual];
-        el.classList.toggle("ativo", ativo && filtros[qual] !== null);
-        el.classList.toggle("inativo", !ativo);
-      });
-
+      atualizarLegendaUI();
       reaplicarEstilos();
+
+      const limparStatus = document.getElementById("filtro-status-limpar");
+      const limparTipo = document.getElementById("filtro-tipo-limpar");
+      if (filtros.status !== null) limparStatus.classList.add("visivel");
+      else limparStatus.classList.remove("visivel");
+      if (filtros.tipo !== null) limparTipo.classList.add("visivel");
+      else limparTipo.classList.remove("visivel");
     }
 
-    function limparFiltro(qual) {
-      filtros[qual] = null;
-      document.getElementById(`filtro-${qual}-limpar`).classList.remove("visivel");
-      document.querySelectorAll(`.legenda-item[data-qual="${qual}"]`).forEach(el => {
-        el.classList.remove("ativo", "inativo");
-      });
+    function limparFiltro(tipo) {
+      if (tipo === "status") filtros.status = null;
+      else filtros.tipo = null;
+      atualizarLegendaUI();
       reaplicarEstilos();
+      document.getElementById(`filtro-${tipo}-limpar`).classList.remove("visivel");
+    }
+
+    function atualizarLegendaUI() {
+      document.querySelectorAll("#legenda-lista .legenda-item, #tipo-lista .legenda-item").forEach(el => {
+        const label = el.querySelector(".legenda-label").textContent;
+        const tipo = el.closest("#legenda-lista") ? "status" : "tipo";
+        const current = tipo === "status" ? filtros.status : filtros.tipo;
+        el.classList.toggle("ativo", current === label);
+      });
     }
 
     function reaplicarEstilos() {
@@ -962,146 +1198,159 @@
         geojsonLayer.eachLayer(layer => {
           if (!layer.feature) return;
           const { ibge } = extrairPropriedades(layer.feature.properties);
-          layer === selectedLayer
-            ? aplicarEstiloSelecionado(layer, ibge)
-            : aplicarEstiloNormal(layer, ibge);
+          if (layer === selectedLayer && selectedType === "municipio") {
+            layer.setStyle(getEstilo(ibge, { selected: true }));
+          } else {
+            layer.setStyle(getEstilo(ibge));
+          }
         });
       }
-      if (regionaisLayer) {
-        regionaisLayer.eachLayer(layer => {
+
+      if (regionaisCeLayer) {
+        regionaisCeLayer.eachLayer(layer => {
           if (!layer.feature) return;
-          const chave = chaveRegional(layer.feature.properties);
-          layer === selectedLayer
-            ? aplicarEstiloSelecionadoRegional(layer, chave)
-            : layer.setStyle(getEstiloRegional(chave));
+          const chave = chaveRegionalCe(layer.feature.properties);
+          if (!chave) return;
+          if (layer === selectedLayer && selectedType === "regional") {
+            layer.setStyle(getEstiloRegionalCe(chave, { selected: true }));
+          } else {
+            layer.setStyle(getEstiloRegionalCe(chave));
+          }
         });
       }
     }
+
+    // ════════════════════════════════════════════════════════════
+    // FILTROS REGIONAIS AVANÇADOS
+    // ════════════════════════════════════════════════════════════
+    function renderizarFiltrosRegionais() {
+      // Preenche dropdown de status
+      const statusSelect = document.getElementById("filtro-status-regional");
+      const statusList = [...new Set(Object.values(dadosRegionais).map(d => d.status).filter(Boolean))].sort();
+      statusSelect.innerHTML = `<option value="">Todos os status</option>`;
+      statusList.forEach(st => {
+        const opt = document.createElement("option");
+        opt.value = st;
+        opt.textContent = st;
+        statusSelect.appendChild(opt);
+      });
+
+      // Preenche dropdown de técnicos
+      const tecSelect = document.getElementById("filtro-tecnico-regional");
+      tecSelect.innerHTML = `<option value="">Todos os técnicos</option>`;
+      listaTodosTecnicos.forEach(tec => {
+        const opt = document.createElement("option");
+        opt.value = tec;
+        opt.textContent = tec;
+        tecSelect.appendChild(opt);
+      });
+    }
+
+    function toggleRegionais() {
+      const checked = document.getElementById("toggle-regionais").checked;
+      layerRegionaisVisivel = checked;
+      if (checked) {
+        map.addLayer(regionaisCeLayer);
+      } else {
+        map.removeLayer(regionaisCeLayer);
+      }
+    }
+
+    function aplicarFiltroStatusRegional() {
+      filtroStatusRegional = document.getElementById("filtro-status-regional").value;
+      reaplicarEstilos();
+      atualizarVisibilidadeLimparRegional();
+    }
+
+    function aplicarFiltroTecnicoRegional() {
+      filtroTecnicoRegional = document.getElementById("filtro-tecnico-regional").value;
+      reaplicarEstilos();
+      atualizarVisibilidadeLimparRegional();
+    }
+
+    function limparFiltrosRegionais() {
+      filtroStatusRegional = "";
+      filtroTecnicoRegional = "";
+      document.getElementById("filtro-status-regional").value = "";
+      document.getElementById("filtro-tecnico-regional").value = "";
+      reaplicarEstilos();
+      atualizarVisibilidadeLimparRegional();
+    }
+
+    function atualizarVisibilidadeLimparRegional() {
+      const limpar = document.getElementById("filtro-regionais-limpar");
+      if (filtroStatusRegional || filtroTecnicoRegional) {
+        limpar.classList.add("visivel");
+      } else {
+        limpar.classList.remove("visivel");
+      }
+    }
+
     // ════════════════════════════════════════════════════════════
     // BUSCA
     // ════════════════════════════════════════════════════════════
     const inputBusca = document.getElementById("busca");
-    const listaBusca = document.getElementById("busca-resultados");
+    const resultBusca = document.getElementById("busca-resultados");
 
-    function fecharBusca() {
-      listaBusca.style.display = "none";
-      inputBusca.blur();
-    }
-
-    function normalizar(s) {
-      return s.toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "");
-    }
-
-    inputBusca.addEventListener("input", function () {
-      const q = normalizar(this.value.trim());
-      listaBusca.style.display = "none";
-
-      if (q.length < 2 || !geojsonData) return;
+    inputBusca.addEventListener("input", () => {
+      const q = inputBusca.value.trim().toLowerCase();
+      if (!q) { fecharBusca(); return; }
 
       const resultados = [];
-      geojsonData.features.forEach(f => {
-        const { ibge, nome } = extrairPropriedades(f.properties);
-        if (normalizar(nome).includes(q) || ibge.includes(q)) {
-          resultados.push({ ibge, nome });
+
+      // Busca municípios
+      Object.entries(dadosPlanilha).forEach(([ibge, d]) => {
+        const nome = d.municipio || ibge;
+        if (nome.toLowerCase().includes(q) || ibge.includes(q)) {
+          resultados.push({ type: "municipio", ibge, nome, label: nome });
         }
       });
 
-      // Regionais de Fortaleza na busca
-      if (regionaisData) {
-        regionaisData.features.forEach(f => {
-          const chave = chaveRegional(f.properties);
-          if (chave && normalizar(chave).includes(q)) {
-            resultados.push({ ibge: null, nome: chave, isRegional: true });
-          }
-        });
-      }
-
-      resultados.sort((a, b) => a.nome.localeCompare(b.nome));
-      const top = resultados.slice(0, 10);
-
-      if (!top.length) return;
-
-      listaBusca.innerHTML = top.map(({ ibge, nome }) => `
-        <div class="busca-item" data-ibge="${ibge}" data-nome="${nome}">
-          <span>${nome}</span>
-          <span class="ibge">${ibge}</span>
-        </div>
-      `).join("");
-
-      listaBusca.innerHTML = top.map(({ ibge, nome, isRegional }) => `
-        <div class="busca-item" data-ibge="${ibge || ''}" data-nome="${nome}" data-regional="${isRegional || false}">
-          <span>${nome}</span>
-          <span class="ibge">${isRegional ? 'Regional' : ibge}</span>
-        </div>
-      `).join("");
-
-      listaBusca.querySelectorAll(".busca-item").forEach(el => {
-        el.addEventListener("click", () => {
-          const ibge = el.dataset.ibge;
-          const nome = el.dataset.nome;
-          const layer = featureLayers[ibge];
-          if (layer) selecionarMunicipio(ibge, nome, layer);
-          inputBusca.value = nome;
-          fecharBusca();
-        });
-
-        el.addEventListener("click", () => {
-          const nome = el.dataset.nome;
-          if (el.dataset.regional === "true") {
-            const layer = regionaisLayers[nome];
-            if (layer) selecionarRegional(nome, layer);
-          } else {
-            const ibge = el.dataset.ibge;
-            const layer = featureLayers[ibge];
-            if (layer) selecionarMunicipio(ibge, nome, layer);
-          }
-          inputBusca.value = nome;
-          fecharBusca();
-        });
+      // Busca regionais
+      Object.entries(dadosRegionais).forEach(([nome, d]) => {
+        if (nome.toLowerCase().includes(q)) {
+          resultados.push({ type: "regional", nome, label: `${nome} (Regional)` });
+        }
       });
 
-      listaBusca.style.display = "block";
+      if (resultados.length === 0) { fecharBusca(); return; }
+
+      resultBusca.innerHTML = resultados.slice(0, 10).map(r =>
+        `<div class="busca-item" data-type="${r.type}" data-key="${r.ibge || r.nome}">
+          <span>${r.label}</span>
+          ${r.ibge ? `<span class="ibge">${r.ibge}</span>` : ""}
+        </div>`
+      ).join("");
+
+      resultBusca.style.display = "block";
+
+      resultBusca.querySelectorAll(".busca-item").forEach(el => {
+        el.onclick = () => {
+          const type = el.dataset.type;
+          const key = el.dataset.key;
+          if (type === "municipio") {
+            const layer = featureLayers[key];
+            if (layer) {
+              const { nome } = extrairPropriedades(layer.feature.properties);
+              selecionarMunicipio(key, nome, layer);
+              map.flyToBounds(layer.getBounds(), { padding: [80, 80], duration: 0.6 });
+            }
+          } else if (type === "regional") {
+            const layer = regionaisCeFeatureLayers[key];
+            if (layer) {
+              selecionarRegionalCe(key, layer);
+              map.flyToBounds(layer.getBounds(), { padding: [80, 80], duration: 0.5 });
+            }
+          }
+          fecharBusca();
+        };
+      });
     });
 
-    inputBusca.addEventListener("keydown", e => {
-      if (e.key === "Escape") fecharBusca();
-    });
-
-    document.addEventListener("click", e => {
-      if (!e.target.closest(".search-wrap")) fecharBusca();
-    });
-
-    // ════════════════════════════════════════════════════════════
-    // BOTÃO RELOAD
-    // ════════════════════════════════════════════════════════════
-    document.getElementById("btn-reload").addEventListener("click", async function () {
-      this.classList.add("loading");
-      this.disabled = true;
-      const ri = this.querySelector(".ri");
-      ri.textContent = "↻";
-
-      try {
-        const r = await fetch(`${API}/reload`, { method: "POST" });
-        const j = await r.json();
-
-        if (j.ok) {
-          await carregarDados();
-          ri.textContent = "✓";
-          setTimeout(() => { ri.textContent = "↻"; }, 1800);
-        } else {
-          alert("Erro ao recarregar:\n" + (j.erro || "desconhecido"));
-          ri.textContent = "↻";
-        }
-      } catch (e) {
-        alert("Servidor indisponível:\n" + e.message);
-        ri.textContent = "↻";
-      } finally {
-        this.classList.remove("loading");
-        this.disabled = false;
-      }
-    });
+    function fecharBusca() {
+      resultBusca.style.display = "none";
+      resultBusca.innerHTML = "";
+    }
 
     // ════════════════════════════════════════════════════════════
     // STATUS BAR
@@ -1109,30 +1358,46 @@
     async function atualizarSb() {
       try {
         const r = await fetch(`${API}/status`);
-        const j = await r.json();
-        document.getElementById("sb-conn").innerHTML =
-          `<span class="dot-ok">●</span> Servidor ativo`;
-        document.getElementById("sb-total").textContent =
-          `${j.total_municipios} municípios`;
-        document.getElementById("sb-hora").textContent =
-          j.gerado_em ? `Atualizado ${j.gerado_em}` : "";
+        if (!r.ok) throw new Error();
+        const s = await r.json();
+        document.getElementById("sb-conn").innerHTML = `<span class="dot-ok">●</span> ${s.total_municipios} mun. · ${s.total_regionais} reg.`;
+        document.getElementById("sb-total").textContent = `Fonte: ${s.fonte}`;
+        document.getElementById("sb-hora").textContent = `Atualizado: ${s.gerado_em}`;
       } catch {
-        setSb(false, "Servidor indisponível");
+        document.getElementById("sb-conn").innerHTML = `<span class="dot-err">●</span> Offline`;
       }
     }
 
     function setSb(ok, msg) {
-      document.getElementById("sb-conn").innerHTML = ok
-        ? `<span class="dot-ok">●</span> Servidor ativo`
-        : `<span class="dot-err">●</span> ${msg}`;
+      document.getElementById("sb-conn").innerHTML = `<span class="dot-${ok ? 'ok' : 'err'}">●</span> ${msg}`;
     }
+
+    // ════════════════════════════════════════════════════════════
+    // RELOAD
+    // ════════════════════════════════════════════════════════════
+    document.getElementById("btn-reload").addEventListener("click", async () => {
+      const btn = document.getElementById("btn-reload");
+      btn.classList.add("loading");
+      btn.disabled = true;
+      try {
+        const r = await fetch(`${API}/reload`, { method: "POST" });
+        if (!r.ok) throw new Error();
+        await carregarDados();
+      } catch (e) {
+        console.error("Reload:", e);
+        setSb(false, "Erro no reload");
+      }
+      btn.classList.remove("loading");
+      btn.disabled = false;
+    });
 
     // ════════════════════════════════════════════════════════════
     // INIT
     // ════════════════════════════════════════════════════════════
     (async () => {
-      await Promise.all([carregarGeojson(), carregarRegionais(), carregarDados()]);
-      renderizarLegenda();
+      await carregarGeojsonMunicipios();
+      await carregarRegionaisCe();
+      await carregarDados();
     })();
   </script>
 </body>
