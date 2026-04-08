@@ -669,7 +669,8 @@
     function chaveRegionalCe(props) {
       const regional = String(props.Regional || "").trim();
       if (!regional) return null;
-      return regional;
+      // Normaliza para lowercase para match com o backend
+      return regional.toLowerCase();
     }
 
     // ════════════════════════════════════════════════════════════
@@ -891,7 +892,8 @@
             layer.on("mouseover", function (e) {
               if (this !== selectedLayer) this.setStyle(getEstiloRegionalCe(chave, { hover: true }));
               const dado = dadosRegionais[chave];
-              this.bindTooltip(montarTooltipRegionalCe(dado, chave), {
+              const displayName = dado ? (dado.display_name || chave) : chave;
+              this.bindTooltip(montarTooltipRegionalCe(dado, displayName), {
                 sticky: true, direction: "top", offset: [0, -6], opacity: 1
               }).openTooltip(e.latlng);
             });
@@ -980,7 +982,7 @@
       document.getElementById("card-detalhes").innerHTML = html;
     }
 
-    function selecionarRegionalCe(nome, layer) {
+    function selecionarRegionalCe(chave, layer) {
       if (selectedLayer && selectedLayer !== layer) {
         if (selectedType === "municipio") {
           aplicarEstiloNormal(selectedLayer, selectedKey);
@@ -991,16 +993,18 @@
       }
 
       selectedLayer = layer;
-      selectedKey = nome;
+      selectedKey = chave;
       selectedType = "regional";
-      layer.setStyle(getEstiloRegionalCe(nome, { selected: true }));
+      layer.setStyle(getEstiloRegionalCe(chave, { selected: true }));
 
       map.flyToBounds(layer.getBounds(), { padding: [80, 80], duration: 0.5, maxZoom: 12 });
 
-      const dado = dadosRegionais[nome];
+      const dado = dadosRegionais[chave];
+      const displayName = dado ? (dado.display_name || chave) : chave;
+
       if (!dado) {
         document.getElementById("card-detalhes").innerHTML = `
-          <div class="mun-nome">${nome}</div>
+          <div class="mun-nome">${displayName}</div>
           <div class="mun-subtitulo">Regional do Ceará</div>
           <div class="sem-dado">Sem dado na planilha</div>`;
         return;
@@ -1014,7 +1018,7 @@
       const tecnicos = dado.tecnicos || [];
       const municipios = dado.municipios || [];
 
-      let html = `<div class="mun-nome">${nome}</div>
+      let html = `<div class="mun-nome">${displayName}</div>
         <div class="mun-subtitulo">Regional do Ceará</div>`;
 
       if (status) {

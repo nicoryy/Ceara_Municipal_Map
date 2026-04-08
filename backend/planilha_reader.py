@@ -320,25 +320,31 @@ def carregar_dados(config, forcar: bool = False):
 def _agregar_por_regional(dados_municipios):
     """
     Agrega dados de municípios por regional.
-    
+    Normaliza nome da regional para lowercase para match com GeoJSON.
+
     Retorna:
-      { regiao: { os[], tecnicos[], resumo_status{}, municipios[], total_os, total_tecnicos } }
+      { regiao_lowercase: { os[], tecnicos[], resumo_status{}, municipios[], total_os, total_tecnicos, display_name } }
     """
     regionais = defaultdict(lambda: {
         "os": set(),
         "tecnicos": set(),
         "resumo_status": defaultdict(int),
         "municipios": [],
+        "display_name": "",
     })
-    
+
     for cod_ibge, dados in dados_municipios.items():
-        regiao = dados.get("regiao", "")
-        if not regiao:
+        regiao_raw = dados.get("regiao", "")
+        if not regiao_raw:
             continue
+
+        # Normaliza para lowercase para match com GeoJSON
+        regiao_key = regiao_raw.strip().lower()
         
-        r = regionais[regiao]
+        r = regionais[regiao_key]
+        r["display_name"] = regiao_raw.strip()  # Guarda nome original para display
         r["municipios"].append(cod_ibge)
-        
+
         # Agrega OS únicas
         for os_num in dados.get("os", []):
             r["os"].add(os_num)
@@ -361,6 +367,7 @@ def _agregar_por_regional(dados_municipios):
             "municipios": dados["municipios"],
             "total_os": len(dados["os"]),
             "total_tecnicos": len(dados["tecnicos"]),
+            "display_name": dados["display_name"],
         }
     
     return resultado
