@@ -813,9 +813,13 @@
     // ════════════════════════════════════════════════════════════
     async function carregarGeojsonMunicipios() {
       try {
+        console.log("Carregando GeoJSON municípios...");
         const r = await fetch("/municipios_ce.geojson");
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        
+        console.log("Parseando GeoJSON (pode demorar)...");
         geojsonData = await r.json();
+        console.log(`GeoJSON carregado: ${geojsonData.features.length} features`);
 
         geojsonLayer = L.geoJSON(geojsonData, {
           style: f => {
@@ -845,10 +849,23 @@
           },
         }).addTo(map);
 
-        map.fitBounds(geojsonLayer.getBounds());
+        console.log("GeoJSON adicionado ao mapa, ajustando bounds...");
+        try {
+          const bounds = geojsonLayer.getBounds();
+          if (bounds.isValid() && bounds.getNorth() > -90) {
+            map.fitBounds(bounds, { padding: [50, 50] });
+            console.log("Bounds ajustados com sucesso!");
+          } else {
+            console.warn("Bounds inválidos, usando bounds manuais do Ceará");
+            map.setView([-5.5, -39.5], 7);
+          }
+        } catch (e) {
+          console.error("Erro no fitBounds:", e);
+          map.setView([-5.5, -39.5], 7);
+        }
       } catch (e) {
         console.error("GeoJSON municípios:", e);
-        setSb(false, "GeoJSON não encontrado");
+        setSb(false, "Erro ao carregar GeoJSON: " + e.message);
       }
     }
 

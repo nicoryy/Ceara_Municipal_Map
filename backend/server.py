@@ -165,10 +165,11 @@ def static_files(filename):
 # Serve o GeoJSON das regionais
 @app.route("/regionais_ce.geojson")
 def regionais_geojson():
-    geojson_path = config.GEOJSON_REGIONAIS_PATH
-    if not os.path.exists(geojson_path):
-        return jsonify({"erro": f"GeoJSON de regionais não encontrado: {geojson_path}"}), 404
-    return send_from_directory(os.path.dirname(geojson_path), os.path.basename(geojson_path))
+    filename = "regionais_ce.geojson"
+    filepath = os.path.join(FRONTEND_DIR, filename)
+    if not os.path.exists(filepath):
+        return jsonify({"erro": f"GeoJSON de regionais não encontrado: {filepath}"}), 404
+    return send_from_directory(FRONTEND_DIR, filename)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

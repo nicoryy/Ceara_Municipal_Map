@@ -81,11 +81,11 @@ def ler_via_xlwings(path, aba, col_ibge, col_status, col_tipo, col_municipio=Non
         idx_status = cabecalho.index(col_status)
     except ValueError as e:
         raise ValueError(f"Coluna não encontrada: {e}. Colunas na aba: {', '.join(cabecalho)}")
-    idx_tipo      = cabecalho.index(col_tipo)      if col_tipo      in cabecalho else None
-    idx_municipio = cabecalho.index(col_municipio) if col_municipio in cabecalho else None
-    idx_regiao    = cabecalho.index(col_regiao)    if col_regiao    in cabecalho else None
-    idx_tecnico   = cabecalho.index(col_tecnico)   if col_tecnico   in cabecalho else None
-    idx_os        = cabecalho.index(col_os)        if col_os        in cabecalho else None
+    idx_tipo      = cabecalho.index(col_tipo)      if (col_tipo and col_tipo in cabecalho) else None
+    idx_municipio = cabecalho.index(col_municipio) if (col_municipio and col_municipio in cabecalho) else None
+    idx_regiao    = cabecalho.index(col_regiao)    if (col_regiao and col_regiao in cabecalho) else None
+    idx_tecnico   = cabecalho.index(col_tecnico)   if (col_tecnico and col_tecnico in cabecalho) else None
+    idx_os        = cabecalho.index(col_os)        if (col_os and col_os in cabecalho) else None
     resultado = _processar_linhas(dados_raw[1:], idx_ibge, idx_status, idx_tipo, idx_municipio, idx_regiao, idx_tecnico, idx_os)
     log.info(f"[xlwings] {len(resultado)} municípios lidos")
     return resultado
@@ -121,11 +121,11 @@ def ler_via_openpyxl(path, aba, col_ibge, col_status, col_tipo, col_municipio=No
         idx_status = cabecalho.index(col_status)
     except ValueError as e:
         raise ValueError(f"Coluna não encontrada: {e}. Colunas na aba: {', '.join(cabecalho)}")
-    idx_tipo      = cabecalho.index(col_tipo)      if col_tipo      in cabecalho else None
-    idx_municipio = cabecalho.index(col_municipio) if col_municipio in cabecalho else None
-    idx_regiao    = cabecalho.index(col_regiao)    if col_regiao    in cabecalho else None
-    idx_tecnico   = cabecalho.index(col_tecnico)   if col_tecnico   in cabecalho else None
-    idx_os        = cabecalho.index(col_os)        if col_os        in cabecalho else None
+    idx_tipo      = cabecalho.index(col_tipo)      if (col_tipo and col_tipo in cabecalho) else None
+    idx_municipio = cabecalho.index(col_municipio) if (col_municipio and col_municipio in cabecalho) else None
+    idx_regiao    = cabecalho.index(col_regiao)    if (col_regiao and col_regiao in cabecalho) else None
+    idx_tecnico   = cabecalho.index(col_tecnico)   if (col_tecnico and col_tecnico in cabecalho) else None
+    idx_os        = cabecalho.index(col_os)        if (col_os and col_os in cabecalho) else None
     resultado = _processar_linhas(linhas[1:], idx_ibge, idx_status, idx_tipo, idx_municipio, idx_regiao, idx_tecnico, idx_os)
     log.info(f"[openpyxl] {len(resultado)} municípios lidos")
     return resultado
@@ -137,39 +137,60 @@ def ler_via_openpyxl(path, aba, col_ibge, col_status, col_tipo, col_municipio=No
 def _processar_linhas(linhas, idx_ibge, idx_status, idx_tipo, idx_municipio=None, idx_regiao=None, idx_tecnico=None, idx_os=None):
     """
     Processa linhas da planilha e retorna dicionário de municípios.
-    
+
+    Se cod_ibge estiver vazio, gera chave temporaria baseada no municipio+OS.
+    Dados sem cod_ibge ainda sao agregados por regional.
+
     Retorna:
       { cod_ibge: { status, tipo, municipio, regiao, os[], tecnicos[], resumo_status{} } }
     """
     resultado = {}
+    contador_sem_ibge = 0
     for linha in linhas:
-        if not linha or linha[idx_ibge] is None:
+        if not linha:
             continue
-        codigo = str(linha[idx_ibge]).strip()
-        if codigo.endswith(".0"):
-            codigo = codigo[:-2]
-        codigo = codigo.zfill(7)
-        if not codigo or codigo == "0000000":
-            continue
-        
-        status = str(linha[idx_status]).strip() if (idx_status is not None and linha[idx_status]) else ""
-        tipo = str(linha[idx_tipo]).strip() if (idx_tipo is not None and linha[idx_tipo]) else ""
-        municipio = str(linha[idx_municipio]).strip() if (idx_municipio is not None and linha[idx_municipio]) else ""
-        regiao = str(linha[idx_regiao]).strip() if (idx_regiao is not None and linha[idx_regiao]) else ""
-        tecnico = str(linha[idx_tecnico]).strip() if (idx_tecnico is not None and linha[idx_tecnico]) else ""
-        os_num = str(linha[idx_os]).strip() if (idx_os is not None and linha[idx_os]) else ""
-        
-        # Se já existe este município, agrega OS e técnicos
+
+        # Determina codigo (pode ser vazio)
+        codigo_original = ""
+        if idx_ibge is not None and len(linha) > idx_ibge and linha[idx_ibge] is not None:
+            codigo_original = str(linha[idx_ibge]).strip()
+
+        if not codigo_original or codigo_original == "0000000":
+            # Gera chave temporaria baseada no municipio + OS
+            municipio_temp = ""
+            os_temp = ""
+            if idx_municipio is not None and len(linha) > idx_municipio and linha[idx_municipio]:
+                municipio_temp = str(linha[idx_municipio]).strip()
+            if idx_os is not None and len(linha) > idx_os and linha[idx_os]:
+                os_temp = str(linha[idx_os]).strip()
+            
+            if municipio_temp or os_temp:
+                contador_sem_ibge += 1
+                codigo = f"TEMP_{municipio_temp}_{os_temp}_{contador_sem_ibge}"
+            else:
+                continue  # Pula linha totalmente vazia
+        else:
+            codigo = codigo_original
+            if codigo.endswith(".0"):
+                codigo = codigo[:-2]
+            codigo = codigo.zfill(7)
+
+        status = str(linha[idx_status]).strip() if (idx_status is not None and len(linha) > idx_status and linha[idx_status]) else ""
+        tipo = str(linha[idx_tipo]).strip() if (idx_tipo is not None and idx_tipo is not None and len(linha) > idx_tipo and linha[idx_tipo]) else ""
+        municipio = str(linha[idx_municipio]).strip() if (idx_municipio is not None and len(linha) > idx_municipio and linha[idx_municipio]) else ""
+        regiao = str(linha[idx_regiao]).strip() if (idx_regiao is not None and len(linha) > idx_regiao and linha[idx_regiao]) else ""
+        tecnico = str(linha[idx_tecnico]).strip() if (idx_tecnico is not None and len(linha) > idx_tecnico and linha[idx_tecnico]) else ""
+        os_num = str(linha[idx_os]).strip() if (idx_os is not None and len(linha) > idx_os and linha[idx_os]) else ""
+
+        # Se ja existe este codigo, agrega OS e tecnicos
         if codigo in resultado:
             entry = resultado[codigo]
             if os_num and os_num not in entry["os"]:
                 entry["os"].append(os_num)
             if tecnico and tecnico not in entry["tecnicos"]:
                 entry["tecnicos"].append(tecnico)
-            # Atualiza resumo de status
             if status:
                 entry["resumo_status"][status] = entry["resumo_status"].get(status, 0) + 1
-            # Atualiza status principal (último lido)
             entry["status"] = status if status else entry["status"]
             entry["tipo"] = tipo if tipo else entry["tipo"]
             entry["municipio"] = municipio if municipio else entry["municipio"]
