@@ -26,43 +26,75 @@ log = logging.getLogger(__name__)
 # -----------------------------------------------------------------------------
 
 def _find_municipio_folder(base: str, nome: str) -> str:
+    log.info(f"[busca] Procurando pasta do municipio '{nome}' em: {base}")
     if not os.path.isdir(base):
+        log.warning(f"[busca] FALHA: diretorio base nao existe: {base}")
         raise FileNotFoundError(f"Diretorio base nao encontrado: {base}")
     alvo = nome.strip().upper()
     for entry in os.listdir(base):
         if entry.upper() == alvo:
             full = os.path.join(base, entry)
             if os.path.isdir(full):
+                log.info(f"[busca] OK pasta do municipio: {full}")
                 return full
+    log.warning(
+        f"[busca] FALHA: pasta '{nome}' nao encontrada em {base}. "
+        f"Entradas existentes: {os.listdir(base)}"
+    )
     raise FileNotFoundError(f"Pasta do municipio nao encontrada: {nome}")
 
 
 def _find_xlsm(folder: str) -> str:
+    auditoria_alvo = os.path.join(folder, "AUDITORIA")
+    log.info(f"[busca] Procurando subpasta AUDITORIA em: {folder}")
     auditoria = None
     for entry in os.listdir(folder):
         if entry.upper() == "AUDITORIA" and os.path.isdir(os.path.join(folder, entry)):
             auditoria = os.path.join(folder, entry)
+            log.info(f"[busca] OK subpasta AUDITORIA: {auditoria}")
             break
     if auditoria is None:
+        log.warning(
+            f"[busca] FALHA: subpasta AUDITORIA nao encontrada em {folder}. "
+            f"Subpastas existentes: {[e for e in os.listdir(folder) if os.path.isdir(os.path.join(folder, e))]}"
+        )
         raise FileNotFoundError(f"Pasta AUDITORIA nao encontrada em: {folder}")
 
+    log.info(f"[busca] Procurando arquivo 'FECHAMENTO CENSO IP*.xlsm' em: {auditoria}")
     candidatos = []
     for entry in os.listdir(auditoria):
         if entry.lower().endswith(".xlsm") and entry.upper().startswith("FECHAMENTO CENSO IP"):
             candidatos.append(os.path.join(auditoria, entry))
     if not candidatos:
+        log.warning(
+            f"[busca] FALHA: nenhum 'FECHAMENTO CENSO IP*.xlsm' em {auditoria}. "
+            f"Arquivos existentes: {os.listdir(auditoria)}"
+        )
         raise FileNotFoundError(
             f"Nenhum arquivo 'FECHAMENTO CENSO IP*.xlsm' encontrado em: {auditoria}"
         )
     candidatos.sort(key=os.path.getmtime, reverse=True)
-    return candidatos[0]
+    escolhido = candidatos[0]
+    if len(candidatos) > 1:
+        log.info(
+            f"[busca] OK arquivo .xlsm (mais recente entre {len(candidatos)}): {escolhido}"
+        )
+    else:
+        log.info(f"[busca] OK arquivo .xlsm: {escolhido}")
+    return escolhido
 
 
 def _find_sheet(wb, alvo: str) -> str:
+    log.info(f"[busca] Procurando aba '{alvo}' (case-insensitive)")
     alvo_up = alvo.strip().upper()
     for nome in wb.sheetnames:
         if nome.strip().upper() == alvo_up:
+            log.info(f"[busca] OK aba: '{nome}'")
             return nome
+    log.warning(
+        f"[busca] FALHA: aba '{alvo}' nao encontrada. "
+        f"Abas disponiveis: {wb.sheetnames}"
+    )
     raise ValueError(
         f"Aba '{alvo}' nao encontrada. Abas disponiveis: {', '.join(wb.sheetnames)}"
     )
