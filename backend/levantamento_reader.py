@@ -15,6 +15,7 @@ import json
 import os
 import re
 import logging
+import warnings
 from datetime import datetime
 
 log = logging.getLogger(__name__)
@@ -215,25 +216,28 @@ def carregar_levantamento(config, nome_municipio: str):
         except Exception as e:
             log.warning(f"[cache-lev] Erro lendo cache {slug}: {e}")
 
-    # Le planilha
+    # Le planilha. Suprime UserWarnings do openpyxl sobre celulas marcadas como
+    # data com serial fora do range (sao geradas durante iter_rows no modo read-only).
     from openpyxl import load_workbook
     log.info(f"[levantamento] Lendo {os.path.basename(xlsm)}")
-    try:
-        wb = load_workbook(xlsm, read_only=True, data_only=True, keep_vba=False)
-    except PermissionError:
-        raise PermissionError(
-            f"Arquivo bloqueado: {os.path.basename(xlsm)}\n"
-            "Feche o Excel ou aguarde o OneDrive sincronizar."
-        )
-    except Exception as e:
-        raise RuntimeError(f"Erro ao abrir planilha: {e}")
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UserWarning)
+        try:
+            wb = load_workbook(xlsm, read_only=True, data_only=True, keep_vba=False)
+        except PermissionError:
+            raise PermissionError(
+                f"Arquivo bloqueado: {os.path.basename(xlsm)}\n"
+                "Feche o Excel ou aguarde o OneDrive sincronizar."
+            )
+        except Exception as e:
+            raise RuntimeError(f"Erro ao abrir planilha: {e}")
 
-    try:
-        sheet_name = _find_sheet(wb, aba_alvo)
-        sheet      = wb[sheet_name]
-        linhas     = list(sheet.iter_rows(values_only=True))
-    finally:
-        wb.close()
+        try:
+            sheet_name = _find_sheet(wb, aba_alvo)
+            sheet      = wb[sheet_name]
+            linhas     = list(sheet.iter_rows(values_only=True))
+        finally:
+            wb.close()
 
     if not linhas:
         raise ValueError("Aba vazia")

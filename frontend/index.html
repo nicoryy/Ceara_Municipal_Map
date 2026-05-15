@@ -320,30 +320,31 @@
       filter: brightness(1.12);
     }
 
-    /* ── pontos do levantamento ── */
+    /* ── pontos do levantamento (apenas pontos sobrepostos usam DivIcon;
+       os singletons usam L.circleMarker no canvas para performance) ── */
     .lev-marker {
-      width: 14px;
-      height: 14px;
+      width: 10px;
+      height: 10px;
       border-radius: 50%;
-      border: 2px solid #0a0d16;
-      position: relative;
+      border: 1px solid #0a0d16;
       box-sizing: border-box;
+      position: relative;
     }
-    .lev-marker.stack::after {
-      content: '*' attr(data-n);
-      position: absolute;
-      top: -9px;
-      right: -10px;
-      background: var(--accent);
+    .lev-marker.stack {
+      width: 12px;
+      height: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       color: #fff;
-      font-size: 10px;
+      font-size: 14px;
       font-weight: 700;
-      border-radius: 9px;
-      padding: 0 4px;
-      line-height: 14px;
-      min-width: 14px;
-      text-align: center;
-      box-shadow: 0 1px 4px rgba(0,0,0,.6);
+      line-height: 1;
+      text-shadow: 0 0 2px rgba(0,0,0,.85);
+    }
+    .lev-marker.stack::before {
+      content: '*';
+      transform: translateY(-1px);
     }
 
     /* ── card de ponto no painel lateral ── */
@@ -724,12 +725,19 @@
     // ════════════════════════════════════════════════════════════
     // MAPA
     // ════════════════════════════════════════════════════════════
-    const map = L.map("map", { zoomControl: true, attributionControl: false });
+    const map = L.map("map", {
+      zoomControl: true,
+      attributionControl: false,
+      maxZoom: 19,
+    });
 
     L.tileLayer(
       "https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png",
-      { subdomains: "abcd", maxZoom: 15 }
+      { subdomains: "abcd", maxZoom: 19 }
     ).addTo(map);
+
+    // Renderer canvas compartilhado para os pontos do levantamento (alto throughput)
+    const canvasRenderer = L.canvas({ padding: 0.5 });
 
     const CE_BOUNDS = L.latLngBounds(L.latLng(-7.86, -41.43), L.latLng(-2.78, -37.25));
     map.fitBounds(CE_BOUNDS);
@@ -1431,18 +1439,30 @@
       return lat.toFixed(6) + "," + lng.toFixed(6);
     }
 
-    function makePointIcon(p, opcoes = {}) {
+    const POINT_RADIUS  = 4;   // raio dos pontos singletons (canvas)
+    const STACK_ICONSIZE = 12; // diâmetro do ícone de stack (DivIcon)
+
+    function makeSingletonMarker(latlng, p) {
       const cor = corDoPonto(p);
-      const stack = !opcoes.singleton && p.__stacked;
-      const n = p.__stack_size || "";
-      return L.divIcon({
-        className: "",
-        html: `<div class="lev-marker${stack ? " stack" : ""}" `
-            + `style="background:${cor}" `
-            + `${stack ? `data-n="${n}"` : ""}></div>`,
-        iconSize: [14, 14],
-        iconAnchor: [7, 7],
+      return L.circleMarker(latlng, {
+        radius:      POINT_RADIUS,
+        fillColor:   cor,
+        fillOpacity: 1,
+        color:       "#0a0d16",
+        weight:      1,
+        renderer:    canvasRenderer,
       });
+    }
+
+    function makeStackMarker(latlng, p) {
+      const cor = corDoPonto(p);
+      const icon = L.divIcon({
+        className: "",
+        html: `<div class="lev-marker stack" style="background:${cor}"></div>`,
+        iconSize:   [STACK_ICONSIZE, STACK_ICONSIZE],
+        iconAnchor: [STACK_ICONSIZE / 2, STACK_ICONSIZE / 2],
+      });
+      return L.marker(latlng, { icon });
     }
 
     function desenharPontos(pontos) {
@@ -1450,23 +1470,25 @@
       levantamentoLayer = L.layerGroup().addTo(map);
       stackGroups = new Map();
 
-      // agrupa por coordenada exata
+      // Agrupa por coordenada exata
       for (const p of pontos) {
         const k = chaveCoord(p.lat, p.lng);
         if (!stackGroups.has(k)) stackGroups.set(k, []);
         stackGroups.get(k).push(p);
       }
 
-      // renderiza um marker por grupo (representante do grupo)
+      // Renderiza um marker por grupo (representante)
       for (const [k, grupo] of stackGroups) {
         const rep = grupo[0];
-        const icon = makePointIcon(rep);
-        const marker = L.marker([rep.lat, rep.lng], { icon }).addTo(levantamentoLayer);
-        marker.bindTooltip(rep.ID_PONTO || "", { direction: "top", offset: [0, -8] });
+        const ll  = L.latLng(rep.lat, rep.lng);
+        const marker = grupo.length > 1
+          ? makeStackMarker(ll, rep)
+          : makeSingletonMarker(ll, rep);
+        marker.bindTooltip(rep.ID_PONTO || "", { direction: "top", offset: [0, -6] });
         if (grupo.length > 1) {
           marker.on("click", (e) => {
             L.DomEvent.stopPropagation(e);
-            spiderfy(L.latLng(rep.lat, rep.lng), grupo);
+            spiderfy(ll, grupo);
           });
         } else {
           marker.on("click", (e) => {
@@ -1474,6 +1496,7 @@
             mostrarPontoNoPainel(rep);
           });
         }
+        marker.addTo(levantamentoLayer);
       }
     }
 
@@ -1489,13 +1512,13 @@
         const off = L.point(Math.cos(a) * radius, Math.sin(a) * radius);
         const ll = map.layerPointToLatLng(px.add(off));
         const p = pontos[i];
-        const ic = makePointIcon(p, { singleton: true });
-        const m = L.marker(ll, { icon: ic }).addTo(levantamentoLayer);
-        m.bindTooltip(p.ID_PONTO || "", { direction: "top", offset: [0, -8] });
+        const m = makeSingletonMarker(ll, p);
+        m.bindTooltip(p.ID_PONTO || "", { direction: "top", offset: [0, -6] });
         m.on("click", (e) => {
           L.DomEvent.stopPropagation(e);
           mostrarPontoNoPainel(p);
         });
+        m.addTo(levantamentoLayer);
         const ln = L.polyline([centerLatLng, ll], {
           color: "#7c6ff7",
           weight: 1,
