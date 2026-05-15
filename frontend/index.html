@@ -182,6 +182,35 @@
       line-height: 1;
     }
 
+    /* ── botão ver levantamento ── */
+    #btn-levantamento {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-size: 12px;
+      padding: 6px 12px;
+      cursor: pointer;
+      transition: border-color .2s, color .2s, background .2s, opacity .2s;
+      white-space: nowrap;
+    }
+    #btn-levantamento:not(:disabled):hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    #btn-levantamento:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+    }
+    #btn-levantamento.ativo {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
     /* ── layout ── */
     .main {
       display: flex;
@@ -193,6 +222,172 @@
     #map {
       flex: 1;
       background: #090c14;
+      position: relative;
+    }
+
+    /* ── FAB sair do levantamento ── */
+    #btn-exit-levantamento {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: #E24B4A;
+      color: #fff;
+      border: none;
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(0,0,0,.45);
+      z-index: 600;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      transition: background .15s, transform .15s;
+    }
+    #btn-exit-levantamento:hover {
+      background: #c83a39;
+      transform: scale(1.05);
+    }
+    #btn-exit-levantamento.show {
+      display: flex;
+    }
+
+    /* ── modal ── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.65);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+    }
+    .modal-overlay.show {
+      display: flex;
+    }
+    .modal-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 22px 26px;
+      max-width: 420px;
+      width: 90%;
+      box-shadow: 0 10px 30px rgba(0,0,0,.5);
+    }
+    .modal-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 10px;
+    }
+    .modal-msg {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .modal-msg strong {
+      color: var(--text);
+    }
+    .modal-buttons {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 20px;
+    }
+    .modal-buttons button {
+      border-radius: var(--radius);
+      padding: 7px 16px;
+      font-size: 12px;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      transition: background .15s, border-color .15s, color .15s;
+    }
+    .btn-cancel {
+      background: var(--surface2);
+      color: var(--text);
+    }
+    .btn-cancel:hover {
+      border-color: var(--muted);
+    }
+    .btn-confirm {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    .btn-confirm:hover {
+      filter: brightness(1.12);
+    }
+
+    /* ── pontos do levantamento ── */
+    .lev-marker {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 2px solid #0a0d16;
+      position: relative;
+      box-sizing: border-box;
+    }
+    .lev-marker.stack::after {
+      content: '*' attr(data-n);
+      position: absolute;
+      top: -9px;
+      right: -10px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      border-radius: 9px;
+      padding: 0 4px;
+      line-height: 14px;
+      min-width: 14px;
+      text-align: center;
+      box-shadow: 0 1px 4px rgba(0,0,0,.6);
+    }
+
+    /* ── card de ponto no painel lateral ── */
+    .point-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+      gap: 10px;
+    }
+    .point-label {
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+    .point-value {
+      color: var(--text);
+      text-align: right;
+      word-break: break-word;
+    }
+    .point-value a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .point-value a:hover {
+      text-decoration: underline;
+    }
+    .point-obs-toggle {
+      color: var(--accent);
+      cursor: pointer;
+      font-size: 11px;
+      margin-left: 6px;
+      user-select: none;
+    }
+    .point-obs-toggle:hover {
+      text-decoration: underline;
+    }
+    .point-titulo {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 8px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
     }
 
     .leaflet-tile-pane {
@@ -429,10 +624,17 @@
       <span class="ri">↻</span>
       Recarregar dados
     </button>
+
+    <button id="btn-levantamento" disabled title="Selecione um município para habilitar">
+      <span class="ri">⌖</span>
+      Ver Levantamento
+    </button>
   </header>
 
   <div class="main">
-    <div id="map"></div>
+    <div id="map">
+      <button id="btn-exit-levantamento" title="Sair do levantamento">✕</button>
+    </div>
 
     <div id="painel">
       <div class="painel-titulo">
@@ -462,6 +664,21 @@
     <span id="sb-hora"></span>
   </div>
 
+  <!-- Modal de confirmação Ver Levantamento (precisa estar antes do <script> que registra listeners) -->
+  <div class="modal-overlay" id="modal-confirma">
+    <div class="modal-card">
+      <div class="modal-title">Confirmar visualização</div>
+      <div class="modal-msg">
+        Tem certeza que quer ver o levantamento de
+        <strong id="modal-municipio"></strong>?
+      </div>
+      <div class="modal-buttons">
+        <button class="btn-cancel" id="modal-cancel">Cancelar</button>
+        <button class="btn-confirm" id="modal-confirm">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     // ════════════════════════════════════════════════════════════
@@ -482,6 +699,27 @@
     let regionaisData = null;
     let regionaisLayers = {};  // { "FORTALEZA - REGIONAL 1": layer }
     let filtros = { status: null, tipo: null };    // status selecionado na legenda, ou null
+
+    // Estado do modo Levantamento
+    let levantamentoMode       = false;
+    let levantamentoLayer      = null;   // L.layerGroup com markers
+    let levantamentoPontos     = [];     // pontos crus retornados pelo backend
+    let stackGroups            = null;   // Map<"lat,lng", [pontos]>
+    let currentLevantamentoKey = null;   // IBGE (string) ou nome da regional
+    let currentMunicipioNome   = null;
+    let spiderfied             = null;   // { markers: [], lines: [] }
+    let savedCardHtml          = null;   // placeholder do card para restaurar ao sair
+
+    // Constantes de cor dos pontos (espelham backend/config.py)
+    const COR_MEDICAO_SIM = "#7CFC00";
+    const COR_MEDICAO_NAO = "#1E3A8A";
+
+    // Ordem das colunas exibidas no painel (espelha COLUNAS_LEVANTAMENTO)
+    const COLUNAS_LEVANTAMENTO = [
+      "ID_PONTO", "TRANSFORMADOR", "IMPRODUTIVO", "MEDICAO", "MEDIDOR_NC",
+      "TIPOLAMPADA", "POTENCIA", "ESTADO_TECNICO", "TIPO_REDE", "OBSERVACAO",
+      "DATA_REGISTRO", "Nome_Cadastrador", "LINK_RELATORIO", "PONTOTRAFO", "PROJETO",
+    ];
 
     // ════════════════════════════════════════════════════════════
     // MAPA
@@ -594,6 +832,10 @@
       }
 
       document.getElementById("card-municipio").innerHTML = html;
+
+      currentLevantamentoKey = chave;
+      currentMunicipioNome   = chave;
+      document.getElementById("btn-levantamento").disabled = false;
     }
 
     function aplicarEstiloNormal(layer, ibge) {
@@ -855,6 +1097,10 @@
       }
 
       document.getElementById("card-municipio").innerHTML = html;
+
+      currentLevantamentoKey = String(ibge);
+      currentMunicipioNome   = nome;
+      document.getElementById("btn-levantamento").disabled = false;
     }
 
     // ════════════════════════════════════════════════════════════
@@ -1126,6 +1372,257 @@
         ? `<span class="dot-ok">●</span> Servidor ativo`
         : `<span class="dot-err">●</span> ${msg}`;
     }
+
+    // ════════════════════════════════════════════════════════════
+    // LEVANTAMENTO — modal, fetch, renderização e spiderfy
+    // ════════════════════════════════════════════════════════════
+    function abrirModalLevantamento() {
+      if (!currentLevantamentoKey) return;
+      document.getElementById("modal-municipio").textContent = currentMunicipioNome || "";
+      document.getElementById("modal-confirma").classList.add("show");
+    }
+
+    function fecharModal() {
+      document.getElementById("modal-confirma").classList.remove("show");
+    }
+
+    async function entrarLevantamento() {
+      fecharModal();
+      const key = currentLevantamentoKey;
+      const layer = selectedLayer;
+      if (!key || !layer) return;
+
+      const btn = document.getElementById("btn-levantamento");
+      btn.classList.add("loading");
+      try {
+        const r = await fetch(`${API}/levantamento/${encodeURIComponent(key)}`);
+        if (!r.ok) {
+          const erro = await r.json().catch(() => ({ erro: r.statusText }));
+          throw new Error(erro.erro || `HTTP ${r.status}`);
+        }
+        const json = await r.json();
+        bloquearMapa(layer);
+        desenharPontos(json.pontos || []);
+        levantamentoMode = true;
+        btn.classList.add("ativo");
+      } catch (e) {
+        console.error("Erro ao carregar levantamento:", e);
+        alert("Erro ao carregar levantamento: " + e.message);
+      } finally {
+        btn.classList.remove("loading");
+      }
+    }
+
+    function bloquearMapa(layer) {
+      if (geojsonLayer && map.hasLayer(geojsonLayer)) map.removeLayer(geojsonLayer);
+      if (regionaisLayer && map.hasLayer(regionaisLayer)) map.removeLayer(regionaisLayer);
+      const b = layer.getBounds();
+      map.setMaxBounds(b.pad(0.05));
+      map.flyToBounds(b, { padding: [40, 40], duration: 0.6 });
+      document.getElementById("btn-exit-levantamento").classList.add("show");
+    }
+
+    function corDoPonto(p) {
+      const m = String(p.MEDICAO || "").trim().toUpperCase();
+      return m === "SIM" ? COR_MEDICAO_SIM : COR_MEDICAO_NAO;
+    }
+
+    function chaveCoord(lat, lng) {
+      return lat.toFixed(6) + "," + lng.toFixed(6);
+    }
+
+    function makePointIcon(p, opcoes = {}) {
+      const cor = corDoPonto(p);
+      const stack = !opcoes.singleton && p.__stacked;
+      const n = p.__stack_size || "";
+      return L.divIcon({
+        className: "",
+        html: `<div class="lev-marker${stack ? " stack" : ""}" `
+            + `style="background:${cor}" `
+            + `${stack ? `data-n="${n}"` : ""}></div>`,
+        iconSize: [14, 14],
+        iconAnchor: [7, 7],
+      });
+    }
+
+    function desenharPontos(pontos) {
+      levantamentoPontos = pontos;
+      levantamentoLayer = L.layerGroup().addTo(map);
+      stackGroups = new Map();
+
+      // agrupa por coordenada exata
+      for (const p of pontos) {
+        const k = chaveCoord(p.lat, p.lng);
+        if (!stackGroups.has(k)) stackGroups.set(k, []);
+        stackGroups.get(k).push(p);
+      }
+
+      // renderiza um marker por grupo (representante do grupo)
+      for (const [k, grupo] of stackGroups) {
+        const rep = grupo[0];
+        const icon = makePointIcon(rep);
+        const marker = L.marker([rep.lat, rep.lng], { icon }).addTo(levantamentoLayer);
+        marker.bindTooltip(rep.ID_PONTO || "", { direction: "top", offset: [0, -8] });
+        if (grupo.length > 1) {
+          marker.on("click", (e) => {
+            L.DomEvent.stopPropagation(e);
+            spiderfy(L.latLng(rep.lat, rep.lng), grupo);
+          });
+        } else {
+          marker.on("click", (e) => {
+            L.DomEvent.stopPropagation(e);
+            mostrarPontoNoPainel(rep);
+          });
+        }
+      }
+    }
+
+    function spiderfy(centerLatLng, pontos) {
+      unspiderfy();
+      const n = pontos.length;
+      const px = map.latLngToLayerPoint(centerLatLng);
+      const radius = 30 + n * 3;
+      const markers = [];
+      const lines = [];
+      for (let i = 0; i < n; i++) {
+        const a = (2 * Math.PI * i) / n - Math.PI / 2;
+        const off = L.point(Math.cos(a) * radius, Math.sin(a) * radius);
+        const ll = map.layerPointToLatLng(px.add(off));
+        const p = pontos[i];
+        const ic = makePointIcon(p, { singleton: true });
+        const m = L.marker(ll, { icon: ic }).addTo(levantamentoLayer);
+        m.bindTooltip(p.ID_PONTO || "", { direction: "top", offset: [0, -8] });
+        m.on("click", (e) => {
+          L.DomEvent.stopPropagation(e);
+          mostrarPontoNoPainel(p);
+        });
+        const ln = L.polyline([centerLatLng, ll], {
+          color: "#7c6ff7",
+          weight: 1,
+          opacity: 0.55,
+          interactive: false,
+        }).addTo(levantamentoLayer);
+        markers.push(m);
+        lines.push(ln);
+      }
+      spiderfied = { markers, lines };
+    }
+
+    function unspiderfy() {
+      if (!spiderfied) return;
+      spiderfied.markers.forEach(m => levantamentoLayer && levantamentoLayer.removeLayer(m));
+      spiderfied.lines.forEach(l => levantamentoLayer && levantamentoLayer.removeLayer(l));
+      spiderfied = null;
+    }
+
+    function escapeHtml(s) {
+      return String(s == null ? "" : s)
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+    }
+
+    function renderObsCell(texto, limite = 150) {
+      const t = String(texto || "");
+      if (t.length <= limite) return escapeHtml(t);
+      const short = escapeHtml(t.slice(0, limite)) + "…";
+      const full  = escapeHtml(t);
+      // truque: armazena ambos em data-attrs e o JS troca on click
+      return `<span class="obs-wrap" data-short="${short}" data-full="${full}" data-state="short">${short}`
+           + ` <span class="point-obs-toggle">Ver mais</span></span>`;
+    }
+
+    function mostrarPontoNoPainel(p) {
+      const linhas = [];
+      linhas.push(`<div class="point-titulo">Ponto ${escapeHtml(p.ID_PONTO || "—")}</div>`);
+      for (const col of COLUNAS_LEVANTAMENTO) {
+        const valor = p[col];
+        if (valor === undefined) continue;
+        let valHtml;
+        if (col === "LINK_RELATORIO" && valor) {
+          valHtml = `<a href="${escapeHtml(valor)}" target="_blank" rel="noopener">abrir</a>`;
+        } else if (col === "OBSERVACAO") {
+          valHtml = renderObsCell(valor);
+        } else {
+          valHtml = escapeHtml(valor) || "<span style='color:var(--muted)'>—</span>";
+        }
+        linhas.push(
+          `<div class="point-row">
+             <span class="point-label">${col}</span>
+             <span class="point-value">${valHtml}</span>
+           </div>`
+        );
+      }
+      const card = document.getElementById("card-municipio");
+      card.innerHTML = linhas.join("");
+    }
+
+    // Toggle "Ver mais" / "Ver menos" via event delegation no card
+    document.getElementById("card-municipio").addEventListener("click", (e) => {
+      const toggle = e.target.closest(".point-obs-toggle");
+      if (!toggle) return;
+      const wrap = toggle.parentElement;
+      if (!wrap || !wrap.classList.contains("obs-wrap")) return;
+      const state = wrap.dataset.state;
+      if (state === "short") {
+        wrap.innerHTML = wrap.dataset.full + ` <span class="point-obs-toggle">Ver menos</span>`;
+        wrap.dataset.state = "full";
+      } else {
+        wrap.innerHTML = wrap.dataset.short + ` <span class="point-obs-toggle">Ver mais</span>`;
+        wrap.dataset.state = "short";
+      }
+    });
+
+    function sairLevantamento() {
+      unspiderfy();
+      if (levantamentoLayer) {
+        map.removeLayer(levantamentoLayer);
+        levantamentoLayer = null;
+      }
+      levantamentoPontos = [];
+      stackGroups = null;
+
+      if (geojsonLayer && !map.hasLayer(geojsonLayer)) geojsonLayer.addTo(map);
+      if (regionaisLayer && !map.hasLayer(regionaisLayer)) regionaisLayer.addTo(map);
+
+      map.setMaxBounds(CE_BOUNDS.pad(0.35));
+      map.flyToBounds(CE_BOUNDS, { duration: 0.6 });
+
+      document.getElementById("btn-exit-levantamento").classList.remove("show");
+      document.getElementById("btn-levantamento").classList.remove("ativo");
+      levantamentoMode = false;
+
+      // Restaura o card do município selecionado, se ainda houver
+      if (selectedLayer) {
+        if (selectedIbge) {
+          const props = selectedLayer.feature ? selectedLayer.feature.properties : {};
+          const nome = props.Municipio || props.NM_MUN || currentMunicipioNome;
+          selecionarMunicipio(selectedIbge, nome, selectedLayer);
+        } else if (currentLevantamentoKey) {
+          selecionarRegional(currentLevantamentoKey, selectedLayer);
+        }
+      } else {
+        document.getElementById("card-municipio").innerHTML =
+          `<div class="placeholder"><em>🗺️</em>Clique em um município<br>para ver detalhes</div>`;
+      }
+    }
+
+    // Fecha spiderfy quando o usuário interage com o mapa
+    map.on("click zoomstart movestart", () => unspiderfy());
+
+    // Listeners de UI
+    document.getElementById("btn-levantamento").addEventListener("click", abrirModalLevantamento);
+    document.getElementById("modal-cancel").addEventListener("click", fecharModal);
+    document.getElementById("modal-confirm").addEventListener("click", entrarLevantamento);
+    document.getElementById("modal-confirma").addEventListener("click", (e) => {
+      if (e.target.id === "modal-confirma") fecharModal();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        const overlay = document.getElementById("modal-confirma");
+        if (overlay.classList.contains("show")) fecharModal();
+      }
+    });
+    document.getElementById("btn-exit-levantamento").addEventListener("click", sairLevantamento);
 
     // ════════════════════════════════════════════════════════════
     // INIT

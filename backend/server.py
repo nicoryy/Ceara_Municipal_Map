@@ -21,6 +21,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 import config
 from planilha_reader import carregar_dados
+from levantamento_reader import carregar_levantamento
 
 logging.basicConfig(
     level=logging.INFO,
@@ -53,6 +54,46 @@ def _get_dados(forcar=False):
         "total":     len(dados),
     }
     return dados
+
+
+# Mapa IBGE -> Nome do municipio, lido do GeoJSON do frontend (lazy, 1x).
+_ibge_to_nome_cache = None
+
+
+def _carregar_ibge_to_nome():
+    global _ibge_to_nome_cache
+    if _ibge_to_nome_cache is not None:
+        return _ibge_to_nome_cache
+    geojson_path = os.path.join(FRONTEND_DIR, "municipios_ce.geojson")
+    with open(geojson_path, "r", encoding="utf-8") as f:
+        gj = json.load(f)
+    mapa = {}
+    for feat in gj.get("features", []):
+        props = feat.get("properties", {}) or {}
+        ibge = props.get("codigo_ibg") or props.get("codigo_ibge") or props.get("CD_MUN")
+        nome = props.get("Municipio") or props.get("NM_MUN") or props.get("municipio")
+        if ibge and nome:
+            mapa[str(ibge).zfill(7)] = str(nome)
+    _ibge_to_nome_cache = mapa
+    log.info(f"[geojson] IBGE->Nome carregado: {len(mapa)} municipios")
+    return mapa
+
+
+def _resolver_nome(key: str) -> str:
+    """
+    Converte a chave da URL no nome do municipio usado para localizar a pasta.
+    - 7 digitos numericos: IBGE -> nome via GeoJSON
+    - Caso contrario: trata como nome direto (ex: 'FORTALEZA - REGIONAL 5')
+    """
+    k = key.strip()
+    if k.isdigit() and len(k) <= 7:
+        mapa = _carregar_ibge_to_nome()
+        ibge = k.zfill(7)
+        nome = mapa.get(ibge)
+        if not nome:
+            raise FileNotFoundError(f"IBGE {ibge} nao encontrado no GeoJSON.")
+        return nome
+    return k
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -96,6 +137,30 @@ def reload_dados():
     except Exception as e:
         log.error(f"Erro no reload: {e}")
         return jsonify({"ok": False, "erro": str(e)}), 500
+
+
+@app.route("/levantamento/<path:key>")
+def levantamento(key):
+    try:
+        nome = _resolver_nome(key)
+        dados = carregar_levantamento(config, nome)
+        return jsonify({
+            "municipio": nome,
+            "total":     len(dados),
+            "pontos":    dados,
+        })
+    except FileNotFoundError as e:
+        log.warning(f"[levantamento] 404: {e}")
+        return jsonify({"erro": str(e)}), 404
+    except PermissionError as e:
+        log.warning(f"[levantamento] 503: {e}")
+        return jsonify({"erro": str(e)}), 503
+    except ValueError as e:
+        log.warning(f"[levantamento] 400: {e}")
+        return jsonify({"erro": str(e)}), 400
+    except Exception as e:
+        log.error(f"[levantamento] 500 ({key}): {e}")
+        return jsonify({"erro": str(e)}), 500
 
 
 @app.route("/status")

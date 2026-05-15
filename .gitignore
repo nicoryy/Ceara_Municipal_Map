@@ -1,5 +1,6 @@
 # Cache gerado automaticamente
 data/cache_dados.json
+data/cache_levantamentos/
 
 *.geojson
 *.qmd

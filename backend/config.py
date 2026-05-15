@@ -46,3 +46,43 @@ COR_SEM_DADO = "#B4B2A9"
 # Cor da borda dos municípios no mapa
 COR_BORDA = "#ffffff"
 LARGURA_BORDA = 0
+
+# =============================================================================
+# LEVANTAMENTO — planilhas por município (somente leitura)
+# =============================================================================
+# Base path onde ficam as pastas dos municípios. Estrutura esperada:
+#   <BASE>/<NOME_MUNICIPIO>/AUDITORIA/FECHAMENTO CENSO IP*.xlsm
+# Comparação de nomes é case-insensitive em todas as etapas.
+LEVANTAMENTOS_BASE_PATH = r"C:\Users\Satel\OneDrive - SATEL\Portal - Censo IP\2026\Municipios"
+
+# Diretório onde os caches por município são gravados
+LEVANTAMENTOS_CACHE_DIR = "../data/cache_levantamentos"
+
+# Aba e colunas usadas no levantamento
+LEVANTAMENTO_ABA = "BASE TRATADA"
+COLUNA_LAT       = "LATITUDE"
+COLUNA_LON       = "LONGITUDE"
+
+# Colunas que aparecem no painel lateral (na ordem desejada).
+# Lookup case-insensitive — colunas ausentes na planilha viram string vazia.
+COLUNAS_LEVANTAMENTO = [
+    "ID_PONTO",
+    "TRANSFORMADOR",
+    "IMPRODUTIVO",
+    "MEDICAO",
+    "MEDIDOR_NC",
+    "TIPOLAMPADA",
+    "POTENCIA",
+    "ESTADO_TECNICO",
+    "TIPO_REDE",
+    "OBSERVACAO",
+    "DATA_REGISTRO",
+    "Nome_Cadastrador",
+    "LINK_RELATORIO",
+    "PONTOTRAFO",
+    "PROJETO",
+]
+
+# Cores dos pontos conforme coluna MEDICAO
+COR_MEDICAO_SIM = "#7CFC00"  # verde lima
+COR_MEDICAO_NAO = "#1E3A8A"  # azul escuro
