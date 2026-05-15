@@ -710,10 +710,12 @@
     let currentMunicipioNome   = null;
     let spiderfied             = null;   // { markers: [], lines: [] }
     let savedCardHtml          = null;   // placeholder do card para restaurar ao sair
+    let currentOutlineLayer    = null;   // outline do municipio focado durante o levantamento
 
     // Constantes de cor dos pontos (espelham backend/config.py)
     const COR_MEDICAO_SIM = "#7CFC00";
     const COR_MEDICAO_NAO = "#1E3A8A";
+    const COR_SEM_DADO    = "#B4B2A9";
 
     // Ordem das colunas exibidas no painel (espelha COLUNAS_LEVANTAMENTO)
     const COLUNAS_LEVANTAMENTO = [
@@ -1421,9 +1423,34 @@
       }
     }
 
+    function corStatusAtual() {
+      if (selectedIbge && dadosPlanilha[selectedIbge] && dadosPlanilha[selectedIbge].cor) {
+        return dadosPlanilha[selectedIbge].cor;
+      }
+      if (currentLevantamentoKey
+          && dadosPorMunicipio[currentLevantamentoKey]
+          && dadosPorMunicipio[currentLevantamentoKey].cor) {
+        return dadosPorMunicipio[currentLevantamentoKey].cor;
+      }
+      return COR_SEM_DADO;
+    }
+
     function bloquearMapa(layer) {
       if (geojsonLayer && map.hasLayer(geojsonLayer)) map.removeLayer(geojsonLayer);
       if (regionaisLayer && map.hasLayer(regionaisLayer)) map.removeLayer(regionaisLayer);
+
+      // Mantem so a silhueta do municipio atual, com borda na cor do status.
+      const corStatus = corStatusAtual();
+      currentOutlineLayer = L.geoJSON(layer.feature, {
+        style: {
+          color:       corStatus,
+          weight:      3,
+          opacity:     1,
+          fillOpacity: 0,
+          interactive: false,
+        }
+      }).addTo(map);
+
       const b = layer.getBounds();
       map.setMaxBounds(b.pad(0.05));
       map.flyToBounds(b, { padding: [40, 40], duration: 0.6 });
@@ -1600,6 +1627,10 @@
       if (levantamentoLayer) {
         map.removeLayer(levantamentoLayer);
         levantamentoLayer = null;
+      }
+      if (currentOutlineLayer) {
+        map.removeLayer(currentOutlineLayer);
+        currentOutlineLayer = null;
       }
       levantamentoPontos = [];
       stackGroups = null;
