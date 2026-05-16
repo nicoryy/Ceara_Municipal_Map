@@ -86,3 +86,14 @@ COLUNAS_LEVANTAMENTO = [
 # Cores dos pontos conforme coluna MEDICAO
 COR_MEDICAO_SIM = "#7CFC00"  # verde lima
 COR_MEDICAO_NAO = "#1E3A8A"  # azul escuro
+
+# =============================================================================
+# TRANSFORMADORES (KML) — visualizacao opcional de transformadores por municipio
+# =============================================================================
+# Estrutura esperada:
+#   <BASE>/<NOME_MUNICIPIO>/LOTES/*.kml
+# Nomes podem variar de caixa/acentos; o matching e feito normalizando
+# nomes para apenas alfanumericos em lowercase.
+TRANSFORMADORES_BASE_PATH = r"C:\Users\Satel\OneDrive - SATEL\Portal - Censo IP\2026\INTERNO_ANALISE"
+TRANSFORMADORES_LOTES_SUB = "LOTES"
+TRANSFORMADORES_CACHE_DIR = "../data/cache_transformadores"

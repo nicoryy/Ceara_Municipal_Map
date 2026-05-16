@@ -22,6 +22,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 import config
 from planilha_reader import carregar_dados
 from levantamento_reader import carregar_levantamento
+from transformadores_reader import carregar_transformadores
 
 logging.basicConfig(
     level=logging.INFO,
@@ -137,6 +138,27 @@ def reload_dados():
     except Exception as e:
         log.error(f"Erro no reload: {e}")
         return jsonify({"ok": False, "erro": str(e)}), 500
+
+
+@app.route("/transformadores/<path:key>")
+def transformadores(key):
+    try:
+        nome = _resolver_nome(key)
+        pontos = carregar_transformadores(config, nome)
+        return jsonify({
+            "municipio": nome,
+            "total":     len(pontos),
+            "pontos":    pontos,
+        })
+    except FileNotFoundError as e:
+        log.warning(f"[transformadores] 404: {e}")
+        return jsonify({"erro": str(e)}), 404
+    except PermissionError as e:
+        log.warning(f"[transformadores] 503: {e}")
+        return jsonify({"erro": str(e)}), 503
+    except Exception as e:
+        log.error(f"[transformadores] 500 ({key}): {e}")
+        return jsonify({"erro": str(e)}), 500
 
 
 @app.route("/levantamento/<path:key>")
