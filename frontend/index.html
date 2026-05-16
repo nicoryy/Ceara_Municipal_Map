@@ -254,6 +254,42 @@
       display: flex;
     }
 
+    /* ── overlay de loading centralizado no mapa ── */
+    .map-loading {
+      position: absolute;
+      inset: 0;
+      background: rgba(10,13,22,0.55);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 14px;
+      z-index: 700;
+      pointer-events: all;
+    }
+    .map-loading.show {
+      display: flex;
+    }
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--surface2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    .loading-text {
+      color: var(--text);
+      font-size: 13px;
+      background: var(--surface);
+      padding: 9px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      box-shadow: 0 6px 18px rgba(0,0,0,.45);
+      max-width: 80%;
+      text-align: center;
+    }
+
     /* ── modal ── */
     .modal-overlay {
       position: fixed;
@@ -635,6 +671,10 @@
   <div class="main">
     <div id="map">
       <button id="btn-exit-levantamento" title="Sair do levantamento">✕</button>
+      <div id="map-loading" class="map-loading">
+        <div class="loading-spinner"></div>
+        <div class="loading-text" id="map-loading-text">Carregando…</div>
+      </div>
     </div>
 
     <div id="painel">
@@ -1404,6 +1444,7 @@
 
       const btn = document.getElementById("btn-levantamento");
       btn.classList.add("loading");
+      mostrarLoading(`Carregando levantamento de ${currentMunicipioNome}…`);
       try {
         const r = await fetch(`${API}/levantamento/${encodeURIComponent(key)}`);
         if (!r.ok) {
@@ -1420,6 +1461,7 @@
         alert("Erro ao carregar levantamento: " + e.message);
       } finally {
         btn.classList.remove("loading");
+        esconderLoading();
       }
     }
 
@@ -1563,6 +1605,17 @@
       spiderfied.markers.forEach(m => levantamentoLayer && levantamentoLayer.removeLayer(m));
       spiderfied.lines.forEach(l => levantamentoLayer && levantamentoLayer.removeLayer(l));
       spiderfied = null;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Loading overlay sobre o mapa
+    // ─────────────────────────────────────────────────────────────────────────
+    function mostrarLoading(texto) {
+      document.getElementById("map-loading-text").textContent = texto || "Carregando…";
+      document.getElementById("map-loading").classList.add("show");
+    }
+    function esconderLoading() {
+      document.getElementById("map-loading").classList.remove("show");
     }
 
     function escapeHtml(s) {
