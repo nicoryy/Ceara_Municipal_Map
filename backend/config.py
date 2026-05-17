@@ -97,3 +97,13 @@ COR_MEDICAO_NAO = "#1E3A8A"  # azul escuro
 TRANSFORMADORES_BASE_PATH = r"C:\Users\Satel\OneDrive - SATEL\Portal - Censo IP\2026\INTERNO_ANALISE"
 TRANSFORMADORES_LOTES_SUB = "LOTES"
 TRANSFORMADORES_CACHE_DIR = "../data/cache_transformadores"
+
+# =============================================================================
+# AREAS INACESSIVEIS (GPKG) - visualizacao opcional de poligonos por municipio
+# =============================================================================
+# Estrutura esperada:
+#   <BASE>/<NOME_MUNICIPIO>/AREAS_INACESSIVEIS/*.gpkg
+# Mesma logica do transformadores, mas le .gpkg (GeoPackage) ao inves de .kml.
+AREAS_INACESSIVEIS_BASE_PATH = r"C:\Users\Satel\OneDrive - SATEL\Portal - Censo IP\2026\INTERNO_ANALISE"
+AREAS_INACESSIVEIS_SUB       = "AREAS_INACESSIVEIS"
+AREAS_INACESSIVEIS_CACHE_DIR = "../data/cache_areas_inacessiveis"

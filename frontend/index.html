@@ -211,6 +211,90 @@
       color: #fff;
     }
 
+    /* ── botao de tipo de mapa ── */
+    #btn-maptype {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-size: 12px;
+      padding: 6px 12px;
+      cursor: pointer;
+      transition: border-color .2s, color .2s;
+      white-space: nowrap;
+      min-width: 116px;
+      justify-content: center;
+    }
+    #btn-maptype:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    #btn-maptype .ri {
+      font-size: 14px;
+    }
+
+    /* ── range de data (so visivel no levantamento) ── */
+    #data-range-wrap {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 0 10px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      height: 32px;
+    }
+    #data-range-wrap.show {
+      display: flex;
+    }
+    #data-range-wrap .lbl {
+      font-size: 11px;
+      color: var(--muted);
+      font-family: monospace;
+      white-space: nowrap;
+    }
+    #data-range-wrap .cur {
+      font-size: 11px;
+      color: var(--accent);
+      font-family: monospace;
+      white-space: nowrap;
+      min-width: 80px;
+      text-align: center;
+    }
+    #data-range {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 220px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+      flex-shrink: 0;
+      flex-grow: 0;
+    }
+    #data-range::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      background: var(--accent);
+      border: 2px solid var(--surface);
+      border-radius: 50%;
+      cursor: pointer;
+    }
+    #data-range::-moz-range-thumb {
+      width: 14px;
+      height: 14px;
+      background: var(--accent);
+      border: 2px solid var(--surface);
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
     /* ── layout ── */
     .main {
       display: flex;
@@ -286,6 +370,74 @@
       border-color: var(--accent);
     }
     #btn-transformadores.loading {
+      pointer-events: none;
+      opacity: .6;
+    }
+
+    /* ── FAB toggle areas inacessiveis (abaixo do trafos) ── */
+    #btn-areas {
+      position: absolute;
+      top: 118px;
+      right: 14px;
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: var(--surface);
+      color: #fff;
+      border: 1px solid var(--border);
+      font-size: 16px;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(0,0,0,.45);
+      z-index: 600;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      transition: background .15s, color .15s, transform .15s, border-color .15s;
+    }
+    #btn-areas:hover {
+      border-color: #EF9F27;
+      transform: scale(1.05);
+    }
+    #btn-areas.show {
+      display: flex;
+    }
+    #btn-areas.ativo {
+      background: #EF9F27;
+      border-color: #EF9F27;
+    }
+    #btn-areas.loading {
+      pointer-events: none;
+      opacity: .6;
+    }
+
+    /* ── FAB download/exportar (abaixo do areas) ── */
+    #btn-download {
+      position: absolute;
+      top: 170px;
+      right: 14px;
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: var(--surface);
+      color: #fff;
+      border: 1px solid var(--border);
+      font-size: 18px;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(0,0,0,.45);
+      z-index: 600;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      transition: background .15s, color .15s, transform .15s, border-color .15s;
+    }
+    #btn-download:hover {
+      border-color: var(--accent);
+      transform: scale(1.05);
+    }
+    #btn-download.show {
+      display: flex;
+    }
+    #btn-download.loading {
       pointer-events: none;
       opacity: .6;
     }
@@ -463,7 +615,7 @@
       border-bottom: 1px solid var(--border);
     }
 
-    .leaflet-tile-pane {
+    body.maptype-dark .leaflet-tile-pane {
       filter: brightness(0.8) saturate(0.5);
     }
 
@@ -682,16 +834,28 @@
   </style>
 </head>
 
-<body>
+<body class="maptype-dark">
 
   <header>
     <h1>Mapa Municipal <span>/ Ceará</span></h1>
+
+    <div id="data-range-wrap" title="Mostra levantamentos ate a data selecionada">
+      <span class="lbl" id="data-range-min">—</span>
+      <input type="range" id="data-range" min="0" max="100" value="100" step="1" />
+      <span class="lbl" id="data-range-max">—</span>
+      <span class="cur" id="data-range-cur">—</span>
+    </div>
 
     <div class="search-wrap">
       <span class="search-icon">⌕</span>
       <input id="busca" type="text" placeholder="Buscar município..." autocomplete="off">
       <div id="busca-resultados"></div>
     </div>
+
+    <button id="btn-maptype" title="Trocar tipo de mapa">
+      <span class="ri">◐</span>
+      <span id="btn-maptype-label">Escuro</span>
+    </button>
 
     <button id="btn-reload">
       <span class="ri">↻</span>
@@ -708,6 +872,8 @@
     <div id="map">
       <button id="btn-exit-levantamento" title="Sair do levantamento">✕</button>
       <button id="btn-transformadores" title="Mostrar/ocultar transformadores">★</button>
+      <button id="btn-areas" title="Mostrar/ocultar áreas inacessíveis">⚠</button>
+      <button id="btn-download" title="Exportar dados">⭳</button>
       <div id="map-loading" class="map-loading">
         <div class="loading-spinner"></div>
         <div class="loading-text" id="map-loading-text">Carregando…</div>
@@ -794,6 +960,17 @@
     let transformadoresLayer   = null;
     let transformadoresPontos  = [];
 
+    // Areas inacessiveis (toggle independente dentro do modo levantamento)
+    let areasAtivas      = false;
+    let areasLayer       = null;
+    let areasFeatures    = [];
+
+    // Filtro por data (DATA_REGISTRO) no levantamento
+    let dataMin = null;   // Date min
+    let dataMax = null;   // Date max
+    let dataAte = null;   // Date atual (limite superior)
+    let levantamentoMarkers = new Map();  // chaveCoord -> { layer, group }
+
     // Constantes de cor dos pontos (espelham backend/config.py)
     const COR_MEDICAO_SIM = "#7CFC00";
     const COR_MEDICAO_NAO = "#1E3A8A";
@@ -816,10 +993,49 @@
       maxZoom: 19,
     });
 
-    L.tileLayer(
-      "https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png",
-      { subdomains: "abcd", maxZoom: 19 }
-    ).addTo(map);
+    // ──────────────────────────────────────────────
+    // Tile layers gerenciaveis (troca dinamica preservando estado)
+    // ──────────────────────────────────────────────
+    const MAP_TYPES = [
+      {
+        id: "dark",
+        label: "Escuro",
+        urls: ["https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png"],
+        opts: [{ subdomains: "abcd", maxZoom: 19 }],
+      },
+      {
+        id: "light",
+        label: "Claro",
+        urls: ["https://{s}.basemaps.cartocdn.com/voyager_labels_under/{z}/{x}/{y}{r}.png"],
+        opts: [{ subdomains: "abcd", maxZoom: 19 }],
+      },
+      {
+        id: "satellite",
+        label: "Satélite",
+        urls: [
+          "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+          "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
+        ],
+        opts: [{ maxZoom: 19 }, { maxZoom: 19 }],
+      },
+    ];
+    let mapTypeIdx = 0;
+    let tileLayers = [];
+
+    function aplicarMapType(idx) {
+      tileLayers.forEach(l => map.removeLayer(l));
+      const t = MAP_TYPES[idx];
+      tileLayers = t.urls.map((u, i) => L.tileLayer(u, t.opts[i]));
+      tileLayers.forEach(l => l.addTo(map));
+      tileLayers.forEach(l => l.bringToBack && l.bringToBack());
+      document.body.classList.remove("maptype-dark", "maptype-light", "maptype-satellite");
+      document.body.classList.add(`maptype-${t.id}`);
+      const lbl = document.getElementById("btn-maptype-label");
+      if (lbl) lbl.textContent = t.label;
+      mapTypeIdx = idx;
+    }
+
+    aplicarMapType(0);
 
     // Renderer canvas compartilhado para os pontos do levantamento (alto throughput)
     const canvasRenderer = L.canvas({ padding: 0.5 });
@@ -1499,8 +1715,11 @@
         desenharPontos(json.pontos || []);
         levantamentoMode = true;
         btn.classList.add("ativo");
-        // habilita FAB de transformadores
+        // habilita FABs do modo levantamento
         document.getElementById("btn-transformadores").classList.add("show");
+        document.getElementById("btn-areas").classList.add("show");
+        document.getElementById("btn-download").classList.add("show");
+        configurarRangeData(json.pontos || []);
       } catch (e) {
         console.error("Erro ao carregar levantamento:", e);
         alert("Erro ao carregar levantamento: " + e.message);
@@ -1583,6 +1802,7 @@
       levantamentoPontos = pontos;
       levantamentoLayer = L.layerGroup().addTo(map);
       stackGroups = new Map();
+      levantamentoMarkers = new Map();
 
       // Agrupa por coordenada exata
       for (const p of pontos) {
@@ -1602,15 +1822,21 @@
         if (grupo.length > 1) {
           marker.on("click", (e) => {
             L.DomEvent.stopPropagation(e);
-            spiderfy(ll, grupo);
+            const visiveis = grupo.filter(pontoDentroDoFiltroData);
+            if (visiveis.length === 1) {
+              mostrarPontoNoPainel(visiveis[0]);
+            } else if (visiveis.length > 1) {
+              spiderfy(ll, visiveis);
+            }
           });
         } else {
           marker.on("click", (e) => {
             L.DomEvent.stopPropagation(e);
-            mostrarPontoNoPainel(rep);
+            if (pontoDentroDoFiltroData(rep)) mostrarPontoNoPainel(rep);
           });
         }
         marker.addTo(levantamentoLayer);
+        levantamentoMarkers.set(k, { layer: marker, group: grupo });
       }
     }
 
@@ -1748,6 +1974,310 @@
       }
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // Areas inacessiveis — toggle (.gpkg em AREAS_INACESSIVEIS/)
+    // ─────────────────────────────────────────────────────────────────────────
+    async function toggleAreasInacessiveis() {
+      const btn = document.getElementById("btn-areas");
+      if (areasAtivas) {
+        if (areasLayer) {
+          map.removeLayer(areasLayer);
+          areasLayer = null;
+        }
+        areasFeatures = [];
+        areasAtivas = false;
+        btn.classList.remove("ativo");
+        return;
+      }
+
+      const key = currentLevantamentoKey;
+      if (!key) return;
+      btn.classList.add("loading");
+      mostrarLoading(`Carregando áreas inacessíveis de ${currentMunicipioNome}…`);
+      try {
+        const r = await fetch(`${API}/areas_inacessiveis/${encodeURIComponent(key)}`);
+        if (!r.ok) {
+          const j = await r.json().catch(() => ({ erro: r.statusText }));
+          throw new Error(j.erro || `HTTP ${r.status}`);
+        }
+        const json = await r.json();
+        desenharAreas(json.features || []);
+        areasAtivas = true;
+        btn.classList.add("ativo");
+      } catch (e) {
+        console.error("Erro carregando areas inacessiveis:", e);
+        alert("Erro ao carregar áreas inacessíveis:\n" + e.message);
+      } finally {
+        btn.classList.remove("loading");
+        esconderLoading();
+      }
+    }
+
+    function desenharAreas(features) {
+      areasFeatures = features;
+      areasLayer = L.geoJSON(
+        { type: "FeatureCollection", features },
+        {
+          style: {
+            color: "#EF9F27",
+            weight: 2,
+            opacity: 0.95,
+            fillColor: "#EF9F27",
+            fillOpacity: 0.18,
+          },
+        }
+      ).addTo(map);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Filtro de data no levantamento
+    // ─────────────────────────────────────────────────────────────────────────
+    function parseDataRegistro(s) {
+      // Formato gerado pelo backend: "dd/mm/yyyy HH:MM:SS"
+      if (!s) return null;
+      const m = String(s).trim().match(
+        /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/
+      );
+      if (!m) return null;
+      const d = parseInt(m[1], 10);
+      const mo = parseInt(m[2], 10) - 1;
+      const y = parseInt(m[3], 10);
+      const hh = parseInt(m[4] || "0", 10);
+      const mm = parseInt(m[5] || "0", 10);
+      const ss = parseInt(m[6] || "0", 10);
+      const dt = new Date(y, mo, d, hh, mm, ss);
+      return isNaN(dt.getTime()) ? null : dt;
+    }
+
+    function startOfDay(d) {
+      return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    }
+
+    function fmtData(d) {
+      if (!d) return "—";
+      const dd = String(d.getDate()).padStart(2, "0");
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      return `${dd}/${mm}/${d.getFullYear()}`;
+    }
+
+    function configurarRangeData(pontos) {
+      const wrap = document.getElementById("data-range-wrap");
+      const datas = [];
+      for (const p of pontos) {
+        const d = parseDataRegistro(p.DATA_REGISTRO);
+        if (d) datas.push(startOfDay(d).getTime());
+      }
+      if (datas.length === 0) {
+        wrap.classList.remove("show");
+        dataMin = dataMax = dataAte = null;
+        return;
+      }
+      const minT = Math.min(...datas);
+      const maxT = Math.max(...datas);
+      dataMin = new Date(minT);
+      dataMax = new Date(maxT);
+      dataAte = new Date(maxT);
+      const range = document.getElementById("data-range");
+      const totalDias = Math.max(1, Math.round((maxT - minT) / 86400000));
+      range.min = "0";
+      range.max = String(totalDias);
+      range.value = String(totalDias);
+      document.getElementById("data-range-min").textContent = fmtData(dataMin);
+      document.getElementById("data-range-max").textContent = fmtData(dataMax);
+      document.getElementById("data-range-cur").textContent = fmtData(dataAte);
+      wrap.classList.add("show");
+    }
+
+    function pontoDentroDoFiltroData(p) {
+      if (!dataAte) return true;
+      const d = parseDataRegistro(p.DATA_REGISTRO);
+      if (!d) return true;  // sem data -> nao filtra
+      return startOfDay(d).getTime() <= startOfDay(dataAte).getTime();
+    }
+
+    function aplicarFiltroData() {
+      if (!levantamentoLayer) return;
+      unspiderfy();
+      // Para cada grupo de coordenada, exibe apenas se algum ponto passa o filtro.
+      // Reusa stackGroups + levantamentoMarkers.
+      for (const [k, info] of levantamentoMarkers) {
+        const grupo = info.group;
+        const visiveis = grupo.filter(pontoDentroDoFiltroData);
+        if (visiveis.length === 0) {
+          if (info.layer && levantamentoLayer.hasLayer(info.layer)) {
+            levantamentoLayer.removeLayer(info.layer);
+          }
+        } else {
+          if (info.layer && !levantamentoLayer.hasLayer(info.layer)) {
+            info.layer.addTo(levantamentoLayer);
+          }
+        }
+      }
+    }
+
+    function onDataRangeInput() {
+      if (!dataMin) return;
+      const dias = parseInt(document.getElementById("data-range").value, 10) || 0;
+      dataAte = new Date(dataMin.getTime() + dias * 86400000);
+      document.getElementById("data-range-cur").textContent = fmtData(dataAte);
+      aplicarFiltroData();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Map type switcher (cycle entre dark / claro / satelite)
+    // ─────────────────────────────────────────────────────────────────────────
+    function cicloMapType() {
+      const prox = (mapTypeIdx + 1) % MAP_TYPES.length;
+      aplicarMapType(prox);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Exportar dados — gera KML local + baixa raw files do servidor
+    // ─────────────────────────────────────────────────────────────────────────
+    function escapeXml(s) {
+      return String(s == null ? "" : s)
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+    }
+
+    function pontosVisiveisParaExport() {
+      return levantamentoPontos.filter(pontoDentroDoFiltroData);
+    }
+
+    function geomToKmlCoords(geom) {
+      const ringToStr = ring => ring
+        .map(c => `${c[0]},${c[1]}`).join(" ");
+      const polyToKml = (rings) => {
+        const outer = ringToStr(rings[0] || []);
+        const inners = (rings.slice(1) || [])
+          .map(r => `<innerBoundaryIs><LinearRing><coordinates>${ringToStr(r)}</coordinates></LinearRing></innerBoundaryIs>`)
+          .join("");
+        return `<Polygon><outerBoundaryIs><LinearRing><coordinates>${outer}</coordinates></LinearRing></outerBoundaryIs>${inners}</Polygon>`;
+      };
+      if (!geom) return "";
+      if (geom.type === "Polygon") return polyToKml(geom.coordinates);
+      if (geom.type === "MultiPolygon") {
+        return `<MultiGeometry>${geom.coordinates.map(polyToKml).join("")}</MultiGeometry>`;
+      }
+      return "";
+    }
+
+    function gerarKmlPontos(pontos, nome) {
+      const placemarks = pontos.map(p => {
+        const id = escapeXml(p.ID_PONTO || "");
+        const desc = COLUNAS_LEVANTAMENTO
+          .filter(c => p[c] !== undefined && p[c] !== "")
+          .map(c => `${c}: ${p[c]}`).join("\n");
+        return `<Placemark><name>${id}</name><description>${escapeXml(desc)}</description>` +
+               `<Point><coordinates>${p.lng},${p.lat}</coordinates></Point></Placemark>`;
+      }).join("");
+      return `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>${escapeXml(nome)}</name>${placemarks}</Document></kml>`;
+    }
+
+    function gerarKmlBorda(feature, nome) {
+      const geom = feature && feature.geometry;
+      const kmlGeom = geomToKmlCoords(geom);
+      return `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>${escapeXml(nome)} - Borda</name>` +
+        `<Placemark><name>${escapeXml(nome)}</name>${kmlGeom}</Placemark></Document></kml>`;
+    }
+
+    function gerarKmlAreas(features, nome) {
+      const placemarks = features.map((f, i) => {
+        const g = geomToKmlCoords(f.geometry);
+        return `<Placemark><name>Area inacessivel ${i + 1}</name>${g}</Placemark>`;
+      }).join("");
+      return `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>${escapeXml(nome)} - Areas Inacessiveis</name>${placemarks}</Document></kml>`;
+    }
+
+    function baixarTexto(filename, conteudo, mime = "application/vnd.google-earth.kml+xml") {
+      const blob = new Blob([conteudo], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    function slugArquivo(s) {
+      return String(s || "EXPORT")
+        .normalize("NFD").replace(/[̀-ͯ]/g, "")
+        .replace(/[^A-Za-z0-9_-]+/g, "_")
+        .replace(/^_+|_+$/g, "") || "EXPORT";
+    }
+
+    async function exportarDados() {
+      if (!levantamentoMode) return;
+      const btn = document.getElementById("btn-download");
+      btn.classList.add("loading");
+      try {
+        const slug = slugArquivo(currentMunicipioNome);
+        const pts = pontosVisiveisParaExport();
+
+        // 1) Pontos do levantamento (KML)
+        if (pts.length > 0) {
+          baixarTexto(
+            `${slug}_pontos.kml`,
+            gerarKmlPontos(pts, currentMunicipioNome)
+          );
+        }
+
+        // 2) Borda do municipio (KML)
+        const featBorda = selectedLayer && selectedLayer.feature;
+        if (featBorda) {
+          baixarTexto(
+            `${slug}_borda.kml`,
+            gerarKmlBorda(featBorda, currentMunicipioNome)
+          );
+        }
+
+        // 3) Areas inacessiveis (KML) — apenas se ja carregadas (toggle ativado)
+        if (areasFeatures && areasFeatures.length > 0) {
+          baixarTexto(
+            `${slug}_areas_inacessiveis.kml`,
+            gerarKmlAreas(areasFeatures, currentMunicipioNome)
+          );
+        }
+
+        // 4) Transformadores (KML gerado) — apenas se ja carregados
+        if (transformadoresPontos && transformadoresPontos.length > 0) {
+          const trafosKml = gerarKmlPontos(
+            transformadoresPontos.map(p => ({ ID_PONTO: "TRAFO", lat: p.lat, lng: p.lng })),
+            `${currentMunicipioNome} - Transformadores`
+          );
+          baixarTexto(`${slug}_transformadores.kml`, trafosKml);
+        }
+
+        // 5) Arquivos brutos (gpkg + kmls de LOTES) via backend, em um ZIP
+        try {
+          const rz = await fetch(`${API}/export/${encodeURIComponent(currentLevantamentoKey)}`);
+          if (rz.ok) {
+            const blob = await rz.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `${slug}_raw.zip`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+          }
+        } catch (e) {
+          console.warn("Sem arquivos brutos para exportar:", e);
+        }
+      } catch (e) {
+        console.error("Erro ao exportar:", e);
+        alert("Erro ao exportar: " + e.message);
+      } finally {
+        btn.classList.remove("loading");
+      }
+    }
+
     function escapeHtml(s) {
       return String(s == null ? "" : s)
         .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
@@ -1823,8 +2353,21 @@
       transformadoresAtivos = false;
       const btnTrafo = document.getElementById("btn-transformadores");
       btnTrafo.classList.remove("show", "ativo", "loading");
+
+      if (areasLayer) {
+        map.removeLayer(areasLayer);
+        areasLayer = null;
+      }
+      areasFeatures = [];
+      areasAtivas = false;
+      document.getElementById("btn-areas").classList.remove("show", "ativo", "loading");
+      document.getElementById("btn-download").classList.remove("show", "loading");
+      document.getElementById("data-range-wrap").classList.remove("show");
+      dataMin = dataMax = dataAte = null;
+
       levantamentoPontos = [];
       stackGroups = null;
+      levantamentoMarkers = new Map();
 
       if (geojsonLayer && !map.hasLayer(geojsonLayer)) geojsonLayer.addTo(map);
       if (regionaisLayer && !map.hasLayer(regionaisLayer)) regionaisLayer.addTo(map);
@@ -1869,6 +2412,10 @@
     });
     document.getElementById("btn-exit-levantamento").addEventListener("click", sairLevantamento);
     document.getElementById("btn-transformadores").addEventListener("click", toggleTransformadores);
+    document.getElementById("btn-areas").addEventListener("click", toggleAreasInacessiveis);
+    document.getElementById("btn-download").addEventListener("click", exportarDados);
+    document.getElementById("btn-maptype").addEventListener("click", cicloMapType);
+    document.getElementById("data-range").addEventListener("input", onDataRangeInput);
 
     // ════════════════════════════════════════════════════════════
     // INIT

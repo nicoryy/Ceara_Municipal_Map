@@ -2,6 +2,8 @@
 data/cache_dados.json
 data/cache_levantamentos/
 data/cache_transformadores/
+data/cache_areas_inacessiveis/
+data/*.err
 
 *.geojson
 *.qmd

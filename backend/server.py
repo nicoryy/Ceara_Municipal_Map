@@ -11,10 +11,12 @@ Endpoints:
 
 import sys
 import os
+import io
 import json
+import zipfile
 import logging
 from datetime import datetime
-from flask import Flask, jsonify, send_from_directory
+from flask import Flask, jsonify, send_from_directory, send_file, request
 from flask_cors import CORS
 
 sys.path.insert(0, os.path.dirname(__file__))
@@ -23,6 +25,7 @@ import config
 from planilha_reader import carregar_dados
 from levantamento_reader import carregar_levantamento
 from transformadores_reader import carregar_transformadores
+from areas_inacessiveis_reader import carregar_areas_inacessiveis
 
 logging.basicConfig(
     level=logging.INFO,
@@ -161,6 +164,28 @@ def transformadores(key):
         return jsonify({"erro": str(e)}), 500
 
 
+@app.route("/areas_inacessiveis/<path:key>")
+def areas_inacessiveis(key):
+    try:
+        nome = _resolver_nome(key)
+        res  = carregar_areas_inacessiveis(config, nome)
+        return jsonify({
+            "municipio": nome,
+            "arquivos":  res["arquivos"],
+            "total":     len(res["features"]),
+            "features":  res["features"],
+        })
+    except FileNotFoundError as e:
+        log.warning(f"[areas] 404: {e}")
+        return jsonify({"erro": str(e)}), 404
+    except PermissionError as e:
+        log.warning(f"[areas] 503: {e}")
+        return jsonify({"erro": str(e)}), 503
+    except Exception as e:
+        log.error(f"[areas] 500 ({key}): {e}")
+        return jsonify({"erro": str(e)}), 500
+
+
 @app.route("/levantamento/<path:key>")
 def levantamento(key):
     try:
@@ -183,6 +208,65 @@ def levantamento(key):
     except Exception as e:
         log.error(f"[levantamento] 500 ({key}): {e}")
         return jsonify({"erro": str(e)}), 500
+
+
+@app.route("/export/<path:key>")
+def export_municipio(key):
+    """
+    Retorna um ZIP com:
+      - <slug>/AREAS_INACESSIVEIS/*.gpkg (raw, se existir)
+      - <slug>/LOTES/*.kml (raw, se existir)
+    Os KMLs gerados (pontos, borda) sao montados pelo frontend.
+    """
+    import re
+    try:
+        nome = _resolver_nome(key)
+    except FileNotFoundError as e:
+        return jsonify({"erro": str(e)}), 404
+
+    slug = re.sub(r"[^\w\-]+", "_", nome.upper()).strip("_") or "MUNICIPIO"
+
+    buf = io.BytesIO()
+    incluidos = 0
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for base, sub in [
+            (config.AREAS_INACESSIVEIS_BASE_PATH, "AREAS_INACESSIVEIS"),
+            (config.TRANSFORMADORES_BASE_PATH,    "LOTES"),
+        ]:
+            try:
+                from transformadores_reader import _find_municipio_folder, _normalize
+                folder = _find_municipio_folder(base, nome)
+            except FileNotFoundError:
+                continue
+            sub_path = None
+            alvo = _normalize(sub)
+            for entry in os.listdir(folder):
+                full = os.path.join(folder, entry)
+                if os.path.isdir(full) and _normalize(entry) == alvo:
+                    sub_path = full
+                    break
+            if not sub_path:
+                continue
+            ext = ".gpkg" if sub == "AREAS_INACESSIVEIS" else ".kml"
+            for entry in sorted(os.listdir(sub_path)):
+                if entry.lower().endswith(ext):
+                    src = os.path.join(sub_path, entry)
+                    try:
+                        zf.write(src, arcname=f"{slug}/{sub}/{entry}")
+                        incluidos += 1
+                    except Exception as e:
+                        log.warning(f"[export] Erro adicionando {src}: {e}")
+
+    if incluidos == 0:
+        return jsonify({"erro": "Nenhum arquivo raw para exportar"}), 404
+
+    buf.seek(0)
+    return send_file(
+        buf,
+        mimetype="application/zip",
+        as_attachment=True,
+        download_name=f"{slug}_raw.zip",
+    )
 
 
 @app.route("/status")
