@@ -990,7 +990,7 @@
     const map = L.map("map", {
       zoomControl: true,
       attributionControl: false,
-      maxZoom: 19,
+      maxZoom: 21,
     });
 
     // ──────────────────────────────────────────────
@@ -1001,22 +1001,19 @@
         id: "dark",
         label: "Escuro",
         urls: ["https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png"],
-        opts: [{ subdomains: "abcd", maxZoom: 19 }],
+        opts: [{ subdomains: "abcd", maxZoom: 21, maxNativeZoom: 19 }],
       },
       {
         id: "light",
         label: "Claro",
         urls: ["https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"],
-        opts: [{ subdomains: "abcd", maxZoom: 19 }],
+        opts: [{ subdomains: "abcd", maxZoom: 21, maxNativeZoom: 19 }],
       },
       {
         id: "satellite",
         label: "Satélite",
-        urls: [
-          "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-          "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
-        ],
-        opts: [{ maxZoom: 19 }, { maxZoom: 19 }],
+        urls: ["https://mt{s}.google.com/vt/lyrs=y&hl=pt&x={x}&y={y}&z={z}"],
+        opts: [{ subdomains: "0123", maxZoom: 21, maxNativeZoom: 21 }],
       },
     ];
     let mapTypeIdx = 0;
