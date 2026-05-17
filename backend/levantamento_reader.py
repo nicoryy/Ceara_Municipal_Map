@@ -16,6 +16,7 @@ import os
 import re
 import logging
 import warnings
+import unicodedata
 from datetime import datetime
 
 log = logging.getLogger(__name__)
@@ -25,20 +26,29 @@ log = logging.getLogger(__name__)
 # Resolucao case-insensitive de pasta / arquivo / aba / colunas
 # -----------------------------------------------------------------------------
 
+def _normalize(nome: str) -> str:
+    """Lowercase + remove acentos + mantem so [a-z0-9]. Para casamento robusto."""
+    if not nome:
+        return ""
+    s = unicodedata.normalize("NFD", str(nome))
+    s = s.encode("ascii", "ignore").decode("ascii")
+    return re.sub(r"[^a-z0-9]+", "", s.lower())
+
+
 def _find_municipio_folder(base: str, nome: str) -> str:
     log.info(f"[busca] Procurando pasta do municipio '{nome}' em: {base}")
     if not os.path.isdir(base):
         log.warning(f"[busca] FALHA: diretorio base nao existe: {base}")
         raise FileNotFoundError(f"Diretorio base nao encontrado: {base}")
-    alvo = nome.strip().upper()
+    alvo = _normalize(nome)
     for entry in os.listdir(base):
-        if entry.upper() == alvo:
+        if _normalize(entry) == alvo:
             full = os.path.join(base, entry)
             if os.path.isdir(full):
                 log.info(f"[busca] OK pasta do municipio: {full}")
                 return full
     log.warning(
-        f"[busca] FALHA: pasta '{nome}' nao encontrada em {base}. "
+        f"[busca] FALHA: pasta '{nome}' (normalizada='{alvo}') nao encontrada em {base}. "
         f"Entradas existentes: {os.listdir(base)}"
     )
     raise FileNotFoundError(f"Pasta do municipio nao encontrada: {nome}")
