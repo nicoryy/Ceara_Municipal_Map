@@ -224,20 +224,42 @@ def _slug(nome: str) -> str:
 # Funcao principal
 # -----------------------------------------------------------------------------
 
-def carregar_levantamento(config, nome_municipio: str):
+def _resolver_xlsm_em_bases(bases, nome_municipio: str) -> str:
+    """
+    Tenta cada base em ordem; retorna o caminho do primeiro .xlsm encontrado.
+    Levanta FileNotFoundError com o resumo de todas as tentativas se nada bater.
+    """
+    erros = []
+    for base in bases:
+        try:
+            folder = _find_municipio_folder(base, nome_municipio)
+            return _find_xlsm(folder)
+        except FileNotFoundError as e:
+            erros.append(f"[{base}] {e}")
+            continue
+    raise FileNotFoundError(
+        "Levantamento nao encontrado em nenhuma base:\n  - " + "\n  - ".join(erros)
+    )
+
+
+def carregar_levantamento(config, nome_municipio: str, bases=None):
     """
     Le o levantamento do municipio. Usa cache por mtime do .xlsm.
     Retorna lista de dicts (pontos).
+
+    bases: lista de diretorios base para procurar em ordem. Quando None,
+    usa apenas config.LEVANTAMENTOS_BASE_PATH (comportamento padrao).
     """
-    base       = config.LEVANTAMENTOS_BASE_PATH
     cache_dir  = config.LEVANTAMENTOS_CACHE_DIR
     aba_alvo   = config.LEVANTAMENTO_ABA
     col_lat    = config.COLUNA_LAT
     col_lon    = config.COLUNA_LON
     colunas    = list(config.COLUNAS_LEVANTAMENTO)
 
-    folder = _find_municipio_folder(base, nome_municipio)
-    xlsm   = _find_xlsm(folder)
+    if not bases:
+        bases = [config.LEVANTAMENTOS_BASE_PATH]
+
+    xlsm   = _resolver_xlsm_em_bases(bases, nome_municipio)
     mtime  = os.path.getmtime(xlsm)
 
     slug       = _slug(nome_municipio)
