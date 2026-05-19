@@ -753,6 +753,68 @@
       font-family: monospace;
     }
 
+    /* ── lista de KMLs de transformadores ── */
+    #kml-trafos-section {
+      display: none;
+      border-bottom: 1px solid var(--border);
+    }
+    #kml-trafos-section.show {
+      display: block;
+    }
+    #kml-trafos-lista {
+      padding: 8px 12px 10px;
+      max-height: 240px;
+      overflow-y: auto;
+    }
+    .kml-trafo-item {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 5px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      user-select: none;
+      font-size: 12px;
+      color: var(--text);
+      transition: background .12s;
+    }
+    .kml-trafo-item:hover {
+      background: var(--surface2);
+    }
+    .kml-trafo-item input[type="checkbox"] {
+      accent-color: var(--accent);
+      cursor: pointer;
+      flex-shrink: 0;
+      margin: 0;
+    }
+    .kml-trafo-nome {
+      flex: 1;
+      word-break: break-word;
+    }
+    .kml-trafo-count {
+      font-size: 11px;
+      color: var(--muted);
+      background: var(--bg);
+      padding: 1px 6px;
+      border-radius: 10px;
+      font-family: monospace;
+      flex-shrink: 0;
+    }
+    .kml-trafo-acoes {
+      display: flex;
+      gap: 10px;
+      padding: 0 16px 8px;
+      font-size: 11px;
+    }
+    .kml-trafo-acao {
+      color: var(--accent);
+      cursor: pointer;
+      user-select: none;
+    }
+    .kml-trafo-acao:hover {
+      text-decoration: underline;
+    }
+
     /* ── card município ── */
     #card-municipio {
       padding: 16px;
@@ -893,6 +955,17 @@
       </div>
       <div id="tipo-lista"></div>
 
+      <div id="kml-trafos-section">
+        <div class="painel-titulo" style="margin-top:0">
+          KMLs de Transformadores
+        </div>
+        <div class="kml-trafo-acoes">
+          <span class="kml-trafo-acao" id="kml-trafos-all">Selecionar todos</span>
+          <span class="kml-trafo-acao" id="kml-trafos-none">Limpar</span>
+        </div>
+        <div id="kml-trafos-lista"></div>
+      </div>
+
       <div id="card-municipio">
         <div class="placeholder">
           <em>🗺️</em>
@@ -956,9 +1029,11 @@
     let currentOutlineLayer    = null;   // outline do municipio focado durante o levantamento
 
     // Transformadores (toggle independente dentro do modo levantamento)
-    let transformadoresAtivos  = false;
-    let transformadoresLayer   = null;
-    let transformadoresPontos  = [];
+    let transformadoresAtivos      = false;
+    let transformadoresLayer       = null;             // L.layerGroup raiz (conteм sub-grupos por KML)
+    let transformadoresArquivos    = [];               // [{ arquivo, pontos: [{lat,lng}] }]
+    let transformadoresLayersPorArquivo = new Map();   // arquivo -> L.layerGroup
+    let transformadoresVisiveis    = new Set();        // nomes de arquivos atualmente visiveis
 
     // Areas inacessiveis (toggle independente dentro do modo levantamento)
     let areasAtivas      = false;
@@ -1921,13 +1996,7 @@
     async function toggleTransformadores() {
       const btn = document.getElementById("btn-transformadores");
       if (transformadoresAtivos) {
-        // Desligar
-        if (transformadoresLayer) {
-          map.removeLayer(transformadoresLayer);
-          transformadoresLayer = null;
-        }
-        transformadoresPontos = [];
-        transformadoresAtivos = false;
+        limparTransformadores();
         btn.classList.remove("ativo");
         return;
       }
@@ -1944,7 +2013,7 @@
           throw new Error(j.erro || `HTTP ${r.status}`);
         }
         const json = await r.json();
-        desenharTransformadores(json.pontos || []);
+        desenharTransformadores(json.arquivos || []);
         transformadoresAtivos = true;
         btn.classList.add("ativo");
       } catch (e) {
@@ -1956,18 +2025,90 @@
       }
     }
 
-    function desenharTransformadores(pontos) {
-      transformadoresPontos = pontos;
+    function limparTransformadores() {
+      if (transformadoresLayer) {
+        map.removeLayer(transformadoresLayer);
+        transformadoresLayer = null;
+      }
+      transformadoresLayersPorArquivo = new Map();
+      transformadoresVisiveis = new Set();
+      transformadoresArquivos = [];
+      transformadoresAtivos = false;
+      const sec = document.getElementById("kml-trafos-section");
+      if (sec) sec.classList.remove("show");
+      const lista = document.getElementById("kml-trafos-lista");
+      if (lista) lista.innerHTML = "";
+    }
+
+    function desenharTransformadores(grupos) {
+      transformadoresArquivos = Array.isArray(grupos) ? grupos : [];
       transformadoresLayer = L.layerGroup().addTo(map);
-      for (const p of pontos) {
-        triangleMarker([p.lat, p.lng], {
-          radius:      POINT_RADIUS,
-          fillColor:   COR_TRAFO,
-          fillOpacity: 1,
-          color:       "#0a0d16",
-          weight:      0.8,
-          renderer:    canvasRenderer,
-        }).addTo(transformadoresLayer);
+      transformadoresLayersPorArquivo = new Map();
+      transformadoresVisiveis = new Set();
+
+      for (const g of transformadoresArquivos) {
+        const sub = L.layerGroup();
+        for (const p of (g.pontos || [])) {
+          triangleMarker([p.lat, p.lng], {
+            radius:      POINT_RADIUS,
+            fillColor:   COR_TRAFO,
+            fillOpacity: 1,
+            color:       "#0a0d16",
+            weight:      0.8,
+            renderer:    canvasRenderer,
+          }).addTo(sub);
+        }
+        transformadoresLayersPorArquivo.set(g.arquivo, sub);
+        transformadoresVisiveis.add(g.arquivo);
+        sub.addTo(transformadoresLayer);
+      }
+
+      renderListaKmlTrafos();
+      const sec = document.getElementById("kml-trafos-section");
+      if (sec && transformadoresArquivos.length > 0) sec.classList.add("show");
+    }
+
+    function renderListaKmlTrafos() {
+      const lista = document.getElementById("kml-trafos-lista");
+      if (!lista) return;
+      if (!transformadoresArquivos.length) {
+        lista.innerHTML = `<div class="placeholder" style="margin-top:8px;font-size:12px">Nenhum KML encontrado em LOTES.</div>`;
+        return;
+      }
+      const html = transformadoresArquivos.map(g => {
+        const checked = transformadoresVisiveis.has(g.arquivo) ? "checked" : "";
+        const total   = (g.pontos || []).length;
+        const nomeEsc = escapeHtml(g.arquivo);
+        return `
+          <label class="kml-trafo-item" data-arquivo="${nomeEsc}">
+            <input type="checkbox" ${checked} />
+            <span class="kml-trafo-nome">${nomeEsc}</span>
+            <span class="kml-trafo-count">${total}</span>
+          </label>`;
+      }).join("");
+      lista.innerHTML = html;
+    }
+
+    function setVisibilidadeKmlTrafo(arquivo, visivel) {
+      const sub = transformadoresLayersPorArquivo.get(arquivo);
+      if (!sub || !transformadoresLayer) return;
+      if (visivel) {
+        if (!transformadoresLayer.hasLayer(sub)) sub.addTo(transformadoresLayer);
+        transformadoresVisiveis.add(arquivo);
+      } else {
+        if (transformadoresLayer.hasLayer(sub)) transformadoresLayer.removeLayer(sub);
+        transformadoresVisiveis.delete(arquivo);
+      }
+    }
+
+    function aplicarVisibilidadeKmlsEmMassa(visivel) {
+      for (const g of transformadoresArquivos) {
+        setVisibilidadeKmlTrafo(g.arquivo, visivel);
+      }
+      // Refresca checkboxes
+      const lista = document.getElementById("kml-trafos-lista");
+      if (lista) {
+        lista.querySelectorAll('input[type="checkbox"]').forEach(cb => { cb.checked = visivel; });
       }
     }
 
@@ -2241,10 +2382,17 @@
           );
         }
 
-        // 4) Transformadores (KML gerado) — apenas se ja carregados
-        if (transformadoresPontos && transformadoresPontos.length > 0) {
+        // 4) Transformadores (KML gerado) — apenas KMLs visiveis (filtragem por checkbox)
+        const trafosPts = [];
+        for (const g of transformadoresArquivos) {
+          if (!transformadoresVisiveis.has(g.arquivo)) continue;
+          for (const p of (g.pontos || [])) {
+            trafosPts.push({ ID_PONTO: "TRAFO", lat: p.lat, lng: p.lng });
+          }
+        }
+        if (trafosPts.length > 0) {
           const trafosKml = gerarKmlPontos(
-            transformadoresPontos.map(p => ({ ID_PONTO: "TRAFO", lat: p.lat, lng: p.lng })),
+            trafosPts,
             `${currentMunicipioNome} - Transformadores`
           );
           baixarTexto(`${slug}_transformadores.kml`, trafosKml);
@@ -2342,12 +2490,7 @@
         map.removeLayer(currentOutlineLayer);
         currentOutlineLayer = null;
       }
-      if (transformadoresLayer) {
-        map.removeLayer(transformadoresLayer);
-        transformadoresLayer = null;
-      }
-      transformadoresPontos = [];
-      transformadoresAtivos = false;
+      limparTransformadores();
       const btnTrafo = document.getElementById("btn-transformadores");
       btnTrafo.classList.remove("show", "ativo", "loading");
 
@@ -2413,6 +2556,18 @@
     document.getElementById("btn-download").addEventListener("click", exportarDados);
     document.getElementById("btn-maptype").addEventListener("click", cicloMapType);
     document.getElementById("data-range").addEventListener("input", onDataRangeInput);
+
+    // Lista de KMLs de transformadores — delegacao de evento para checkboxes
+    document.getElementById("kml-trafos-lista").addEventListener("change", (e) => {
+      const cb = e.target.closest('input[type="checkbox"]');
+      if (!cb) return;
+      const item = cb.closest(".kml-trafo-item");
+      const arquivo = item && item.dataset.arquivo;
+      if (!arquivo) return;
+      setVisibilidadeKmlTrafo(arquivo, cb.checked);
+    });
+    document.getElementById("kml-trafos-all").addEventListener("click", () => aplicarVisibilidadeKmlsEmMassa(true));
+    document.getElementById("kml-trafos-none").addEventListener("click", () => aplicarVisibilidadeKmlsEmMassa(false));
 
     // ════════════════════════════════════════════════════════════
     // INIT

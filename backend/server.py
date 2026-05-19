@@ -147,11 +147,12 @@ def reload_dados():
 def transformadores(key):
     try:
         nome = _resolver_nome(key)
-        pontos = carregar_transformadores(config, nome)
+        grupos = carregar_transformadores(config, nome)
+        total = sum(len(g.get("pontos", [])) for g in grupos)
         return jsonify({
             "municipio": nome,
-            "total":     len(pontos),
-            "pontos":    pontos,
+            "total":     total,
+            "arquivos":  grupos,
         })
     except FileNotFoundError as e:
         log.warning(f"[transformadores] 404: {e}")

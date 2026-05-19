@@ -160,10 +160,14 @@ def _fingerprint(arquivos):
 # Funcao principal
 # -----------------------------------------------------------------------------
 
+CACHE_SCHEMA = 2  # bump quando o formato do cache muda
+
+
 def carregar_transformadores(config, nome_municipio: str):
     """
     Le todos os transformadores de um municipio (todos os KMLs em LOTES).
-    Retorna lista de dicts {lat, lng}.
+    Retorna lista de grupos: [{"arquivo": "<basename.kml>", "pontos": [{lat,lng}, ...]}, ...]
+    Ordenada por nome do arquivo.
     """
     base       = config.TRANSFORMADORES_BASE_PATH
     sub        = getattr(config, "TRANSFORMADORES_LOTES_SUB", "LOTES")
@@ -184,43 +188,48 @@ def carregar_transformadores(config, nome_municipio: str):
         try:
             with open(cache_path, "r", encoding="utf-8") as f:
                 cache = json.load(f)
-            if cache.get("fingerprint") == fp:
+            if cache.get("schema") == CACHE_SCHEMA and cache.get("fingerprint") == fp:
                 log.info(
                     f"[cache-trafo] Hit {slug} - {cache.get('total','?')} pontos "
-                    f"({cache.get('gerado_em','?')})"
+                    f"em {len(cache.get('dados', []))} arquivo(s) ({cache.get('gerado_em','?')})"
                 )
                 return cache["dados"]
-            log.info(f"[cache-trafo] Invalidado {slug} (fingerprint mudou)")
+            log.info(f"[cache-trafo] Invalidado {slug} (schema/fingerprint mudou)")
         except Exception as e:
             log.warning(f"[cache-trafo] Erro lendo cache {slug}: {e}")
 
-    # Parse
+    # Parse — agrupa por arquivo
+    grupos = []
+    total = 0
     if not arquivos:
         log.info(f"[trafo] Sem arquivos .kml em {lotes} - retornando lista vazia")
-        pontos = []
     else:
-        pontos = []
         for kml in arquivos:
             extraidos = _parse_kml(kml)
-            pontos.extend(extraidos)
-            log.info(f"[trafo] {os.path.basename(kml)}: {len(extraidos)} pontos (acumulado {len(pontos)})")
+            grupos.append({
+                "arquivo": os.path.basename(kml),
+                "pontos":  extraidos,
+            })
+            total += len(extraidos)
+            log.info(f"[trafo] {os.path.basename(kml)}: {len(extraidos)} pontos (acumulado {total})")
 
     # Salva cache
     os.makedirs(os.path.dirname(cache_path), exist_ok=True)
     novo = {
+        "schema":      CACHE_SCHEMA,
         "fingerprint": fp,
         "municipio":   nome_municipio,
         "lotes_dir":   lotes,
         "gerado_em":   datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
-        "total":       len(pontos),
+        "total":       total,
         "arquivos":    len(arquivos),
-        "dados":       pontos,
+        "dados":       grupos,
     }
     try:
         with open(cache_path, "w", encoding="utf-8") as f:
             json.dump(novo, f, ensure_ascii=False, indent=2)
-        log.info(f"[cache-trafo] Salvo {slug} - {len(pontos)} pontos de {len(arquivos)} arquivo(s)")
+        log.info(f"[cache-trafo] Salvo {slug} - {total} pontos em {len(arquivos)} arquivo(s)")
     except Exception as e:
         log.warning(f"[cache-trafo] Nao foi possivel salvar cache {slug}: {e}")
 
-    return pontos
+    return grupos
