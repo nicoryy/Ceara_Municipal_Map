@@ -122,6 +122,7 @@ def municipios():
             "status":    status,
             "cor":       cor,
             "tipo":      info.get("tipo", ""),
+            "ano":       info.get("ano", ""),
             "municipio": info.get("municipio", ""),
         }
 

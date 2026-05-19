@@ -950,6 +950,12 @@
       <div id="legenda-lista"></div>
 
       <div class="painel-titulo" style="margin-top:0">
+        Ano
+        <span class="filtro-limpar" id="filtro-ano-limpar" onclick="limparFiltro('ano')">Limpar</span>
+      </div>
+      <div id="ano-lista"></div>
+
+      <div class="painel-titulo" style="margin-top:0">
         Tipo
         <span class="filtro-limpar" id="filtro-tipo-limpar" onclick="limparFiltro('tipo')">Limpar</span>
       </div>
@@ -1015,7 +1021,7 @@
     let regionaisLayer = null;
     let regionaisData = null;
     let regionaisLayers = {};  // { "FORTALEZA - REGIONAL 1": layer }
-    let filtros = { status: null, tipo: null };    // status selecionado na legenda, ou null
+    let filtros = { status: null, tipo: null, ano: null };    // status selecionado na legenda, ou null
 
     // Estado do modo Levantamento
     let levantamentoMode       = false;
@@ -1127,10 +1133,12 @@
       const cor = dado ? dado.cor : "#1e2236";
       const status = dado ? dado.status : "";
       const tipo = dado ? dado.tipo : "";
+      const ano = dado ? String(dado.ano || "") : "";
 
       const apagado = (
         (filtros.status !== null && status !== filtros.status) ||
-        (filtros.tipo !== null && tipo !== filtros.tipo)
+        (filtros.tipo !== null && tipo !== filtros.tipo) ||
+        (filtros.ano !== null && ano !== filtros.ano)
       );
 
       return {
@@ -1148,9 +1156,11 @@
 
       const status = dado ? dado.status : "";
       const tipo = dado ? dado.tipo : "";
+      const ano = dado ? String(dado.ano || "") : "";
       const apagado = (
         (filtros.status !== null && status !== filtros.status) ||
-        (filtros.tipo !== null && tipo !== filtros.tipo)
+        (filtros.tipo !== null && tipo !== filtros.tipo) ||
+        (filtros.ano !== null && ano !== filtros.ano)
       );
 
       return {
@@ -1298,11 +1308,13 @@
               const status = dado ? dado.status : "";
               const cor = dado ? dado.cor : "";
               const tipo = dado ? dado.tipo : "";
+              const ano = dado && dado.ano != null ? String(dado.ano).trim() : "";
 
+              const extras = [tipo, ano].filter(Boolean).join(" · ");
               const statusHtml = status
                 ? `<div class="tt-status">
                 <span class="tt-dot" style="background:${cor}"></span>
-                ${status}${tipo ? ` · ${tipo}` : ""}
+                ${status}${extras ? ` · ${extras}` : ""}
               </div>`
                 : `<div class="tt-status" style="color:#8b8fa8">Sem dado</div>`;
 
@@ -1360,8 +1372,11 @@
               const dado = buscarDadoRegional(chave);
               const status = dado ? dado.status : "";
               const cor = dado ? dado.cor : "";
+              const tipo = dado ? dado.tipo : "";
+              const ano = dado && dado.ano != null ? String(dado.ano).trim() : "";
+              const extras = [tipo, ano].filter(Boolean).join(" · ");
               const statusHtml = status
-                ? `<div class="tt-status"><span class="tt-dot" style="background:${cor}"></span>${status}${dado.tipo ? ` · ${dado.tipo}` : ""}</div>`
+                ? `<div class="tt-status"><span class="tt-dot" style="background:${cor}"></span>${status}${extras ? ` · ${extras}` : ""}</div>`
                 : `<div class="tt-status" style="color:#8b8fa8">Sem dado</div>`;
               this.bindTooltip(
                 `<div class="tt-nome">${chave}</div>${statusHtml}`,
@@ -1511,7 +1526,34 @@
         container.appendChild(criarItemFiltro("status", "(sem dado)", "#1e2236", semDado, true));
       }
 
+      renderizarAnos();
       renderizarTipos();
+    }
+
+    function renderizarAnos() {
+      const contagem = {};
+      Object.values(dadosPlanilha).forEach(d => {
+        const ano = d.ano != null ? String(d.ano).trim() : "";
+        if (ano) contagem[ano] = (contagem[ano] || 0) + 1;
+      });
+
+      const container = document.getElementById("ano-lista");
+      container.innerHTML = "";
+
+      if (Object.keys(contagem).length === 0) {
+        container.innerHTML = `<div style="padding:10px 16px;font-size:12px;color:var(--muted)">Nenhum ano encontrado</div>`;
+        return;
+      }
+
+      const anosOrdenados = Object.entries(contagem).sort((a, b) => {
+        const na = Number(a[0]), nb = Number(b[0]);
+        if (!isNaN(na) && !isNaN(nb)) return nb - na;
+        return String(a[0]).localeCompare(String(b[0]));
+      });
+
+      anosOrdenados.forEach(([ano, count]) => {
+        container.appendChild(criarItemFiltro("ano", ano, "var(--muted)", count));
+      });
     }
 
     function renderizarTipos() {
@@ -1539,8 +1581,8 @@
       div.dataset.qual = qual;
       div.dataset.valor = valor;
 
-      // Para tipo, usa um quadrado neutro com borda colorida
-      const corEl = qual === "tipo"
+      // Para tipo/ano, usa um quadrado neutro com borda colorida
+      const corEl = (qual === "tipo" || qual === "ano")
         ? `<div class="legenda-cor" style="background:var(--surface2);border:2px solid var(--accent)"></div>`
         : `<div class="legenda-cor" style="background:${cor}"></div>`;
 

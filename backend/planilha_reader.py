@@ -57,7 +57,7 @@ def _xlwings_arquivo_aberto(path: str):
     return None
 
 
-def ler_via_xlwings(path, aba, col_ibge, col_status, col_tipo, col_municipio=None):
+def ler_via_xlwings(path, aba, col_ibge, col_status, col_tipo, col_municipio=None, col_ano=None):
     wb = _xlwings_arquivo_aberto(path)
     if wb is None:
         raise RuntimeError(f"Arquivo não encontrado aberto no Excel: {os.path.basename(path)}")
@@ -78,7 +78,8 @@ def ler_via_xlwings(path, aba, col_ibge, col_status, col_tipo, col_municipio=Non
         raise ValueError(f"Coluna não encontrada: {e}. Colunas na aba: {', '.join(cabecalho)}")
     idx_tipo      = cabecalho.index(col_tipo)      if col_tipo      in cabecalho else None
     idx_municipio = cabecalho.index(col_municipio) if col_municipio in cabecalho else None
-    resultado = _processar_linhas(dados_raw[1:], idx_ibge, idx_status, idx_tipo, idx_municipio)
+    idx_ano       = cabecalho.index(col_ano)       if col_ano       in cabecalho else None
+    resultado = _processar_linhas(dados_raw[1:], idx_ibge, idx_status, idx_tipo, idx_municipio, idx_ano)
     log.info(f"[xlwings] {len(resultado)} municípios lidos")
     return resultado
 
@@ -86,7 +87,7 @@ def ler_via_xlwings(path, aba, col_ibge, col_status, col_tipo, col_municipio=Non
 # Leitura via openpyxl (arquivo em disco, Excel pode estar fechado)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def ler_via_openpyxl(path, aba, col_ibge, col_status, col_tipo, col_municipio=None):
+def ler_via_openpyxl(path, aba, col_ibge, col_status, col_tipo, col_municipio=None, col_ano=None):
     from openpyxl import load_workbook
     log.info(f"[openpyxl] Lendo arquivo em disco: {os.path.basename(path)}")
     try:
@@ -115,7 +116,8 @@ def ler_via_openpyxl(path, aba, col_ibge, col_status, col_tipo, col_municipio=No
         raise ValueError(f"Coluna não encontrada: {e}. Colunas na aba: {', '.join(cabecalho)}")
     idx_tipo      = cabecalho.index(col_tipo)      if col_tipo      in cabecalho else None
     idx_municipio = cabecalho.index(col_municipio) if col_municipio in cabecalho else None
-    resultado = _processar_linhas(linhas[1:], idx_ibge, idx_status, idx_tipo, idx_municipio)
+    idx_ano       = cabecalho.index(col_ano)       if col_ano       in cabecalho else None
+    resultado = _processar_linhas(linhas[1:], idx_ibge, idx_status, idx_tipo, idx_municipio, idx_ano)
     log.info(f"[openpyxl] {len(resultado)} municípios lidos")
     return resultado
 
@@ -123,7 +125,7 @@ def ler_via_openpyxl(path, aba, col_ibge, col_status, col_tipo, col_municipio=No
 # Processamento comum de linhas
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _processar_linhas(linhas, idx_ibge, idx_status, idx_tipo, idx_municipio=None):
+def _processar_linhas(linhas, idx_ibge, idx_status, idx_tipo, idx_municipio=None, idx_ano=None):
     resultado = {}
     for linha in linhas:
         if not linha or linha[idx_ibge] is None:
@@ -137,7 +139,14 @@ def _processar_linhas(linhas, idx_ibge, idx_status, idx_tipo, idx_municipio=None
         status    = str(linha[idx_status]).strip()    if linha[idx_status]                                else ""
         tipo      = str(linha[idx_tipo]).strip()      if (idx_tipo      is not None and linha[idx_tipo])  else ""
         municipio = str(linha[idx_municipio]).strip() if (idx_municipio is not None and linha[idx_municipio]) else ""
-        resultado[codigo] = {"status": status, "tipo": tipo, "municipio": municipio}
+        ano_val   = linha[idx_ano] if (idx_ano is not None and linha[idx_ano] is not None) else ""
+        if ano_val != "":
+            ano = str(ano_val).strip()
+            if ano.endswith(".0"):
+                ano = ano[:-2]
+        else:
+            ano = ""
+        resultado[codigo] = {"status": status, "tipo": tipo, "municipio": municipio, "ano": ano}
     return resultado
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -161,6 +170,7 @@ def carregar_dados(config, forcar: bool = False):
     cache_path    = config.CACHE_PATH
     col_tipo      = config.COLUNA_TIPO
     col_municipio = getattr(config, "COLUNA_MUNICIPIO", None)
+    col_ano       = getattr(config, "COLUNA_ANO", None)
 
     if not os.path.exists(path):
         raise FileNotFoundError(
@@ -195,7 +205,7 @@ def carregar_dados(config, forcar: bool = False):
     # Tentativa 1: xlwings (apenas se arquivo estiver aberto no Excel)
     if _xlwings_arquivo_aberto(path) is not None:
         try:
-            dados = ler_via_xlwings(path, aba, col_ibge, col_status, col_tipo, col_municipio)
+            dados = ler_via_xlwings(path, aba, col_ibge, col_status, col_tipo, col_municipio, col_ano)
             fonte = "xlwings"
         except Exception as e:
             erros.append(f"xlwings: {e}")
@@ -208,7 +218,7 @@ def carregar_dados(config, forcar: bool = False):
         else:
             log.info("[openpyxl] Arquivo nao aberto no Excel — lendo disco")
         try:
-            dados = ler_via_openpyxl(path, aba, col_ibge, col_status, col_tipo, col_municipio)
+            dados = ler_via_openpyxl(path, aba, col_ibge, col_status, col_tipo, col_municipio, col_ano)
             fonte = "openpyxl"
         except Exception as e:
             erros.append(f"openpyxl: {e}")

@@ -15,6 +15,7 @@ PLANILHA_ABA = "tecnico"
 COLUNA_CODIGO_IBGE = "codigo_ibge"   # deve conter o código de 7 dígitos ex: 2304400
 COLUNA_STATUS      = "status"        # ex: "ativo", "pendente", "concluído"
 COLUNA_TIPO        = "tipo"          # ex: "ressalva", "normal"
+COLUNA_ANO         = "ano"           # ex: 2025, 2026
 COLUNA_MUNICIPIO   = "MUNICIPIO"     # ex: "FORTALEZA - REGIONAL 1" (usado pelas regionais)
 
 # Caminho para o GeoJSON do Ceará exportado pelo QGIS
