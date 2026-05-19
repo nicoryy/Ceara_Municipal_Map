@@ -122,19 +122,24 @@ def _bases_levantamento(info: dict) -> list:
     """
     Decide a ordem de pastas a procurar para o levantamento, com base em
     ano e tipo do municipio:
+      - ano == "2024"     -> apenas 2024
       - ano == "2025"     -> apenas 2025
-      - tipo == "RESSALVA"-> 2026 primeiro, fallback 2025
+      - tipo == "RESSALVA"-> 2026 primeiro, fallback 2025, depois 2024
       - caso contrario    -> apenas 2026
     """
     base_2026 = config.LEVANTAMENTOS_BASE_PATH
     base_2025 = getattr(config, "LEVANTAMENTOS_BASE_PATH_2025", None)
+    base_2024 = getattr(config, "LEVANTAMENTOS_BASE_PATH_2024", None)
     ano  = str(info.get("ano") or "").strip()
     tipo = str(info.get("tipo") or "").strip().upper()
 
+    if ano == "2024" and base_2024:
+        return [base_2024]
     if ano == "2025" and base_2025:
         return [base_2025]
-    if tipo == "RESSALVA" and base_2025:
-        return [base_2026, base_2025]
+    if tipo == "RESSALVA":
+        fallback = [b for b in (base_2025, base_2024) if b]
+        return [base_2026, *fallback]
     return [base_2026]
 
 

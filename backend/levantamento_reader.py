@@ -70,27 +70,28 @@ def _find_xlsm(folder: str) -> str:
         )
         raise FileNotFoundError(f"Pasta AUDITORIA nao encontrada em: {folder}")
 
-    log.info(f"[busca] Procurando arquivo 'FECHAMENTO CENSO IP*.xlsm' em: {auditoria}")
+    log.info(f"[busca] Procurando arquivo 'FECHAMENTO CENSO IP*.xls[mx]' em: {auditoria}")
     candidatos = []
     for entry in os.listdir(auditoria):
-        if entry.lower().endswith(".xlsm") and entry.upper().startswith("FECHAMENTO CENSO IP"):
+        ext = entry.lower()
+        if (ext.endswith(".xlsm") or ext.endswith(".xlsx")) and entry.upper().startswith("FECHAMENTO CENSO IP"):
             candidatos.append(os.path.join(auditoria, entry))
     if not candidatos:
         log.warning(
-            f"[busca] FALHA: nenhum 'FECHAMENTO CENSO IP*.xlsm' em {auditoria}. "
+            f"[busca] FALHA: nenhum 'FECHAMENTO CENSO IP*.xls[mx]' em {auditoria}. "
             f"Arquivos existentes: {os.listdir(auditoria)}"
         )
         raise FileNotFoundError(
-            f"Nenhum arquivo 'FECHAMENTO CENSO IP*.xlsm' encontrado em: {auditoria}"
+            f"Nenhum arquivo 'FECHAMENTO CENSO IP*.xls[mx]' encontrado em: {auditoria}"
         )
     candidatos.sort(key=os.path.getmtime, reverse=True)
     escolhido = candidatos[0]
     if len(candidatos) > 1:
         log.info(
-            f"[busca] OK arquivo .xlsm (mais recente entre {len(candidatos)}): {escolhido}"
+            f"[busca] OK arquivo (mais recente entre {len(candidatos)}): {escolhido}"
         )
     else:
-        log.info(f"[busca] OK arquivo .xlsm: {escolhido}")
+        log.info(f"[busca] OK arquivo: {escolhido}")
     return escolhido
 
 

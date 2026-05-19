@@ -56,6 +56,7 @@ LARGURA_BORDA = 0
 # Comparação de nomes é case-insensitive em todas as etapas.
 LEVANTAMENTOS_BASE_PATH      = r"C:\Users\Satel\OneDrive - SATEL\Portal - Censo IP\2026\Municipios"
 LEVANTAMENTOS_BASE_PATH_2025 = r"C:\Users\Satel\OneDrive - SATEL\Portal - Censo IP\2025\MUNICÍPIOS"
+LEVANTAMENTOS_BASE_PATH_2024 = r"C:\Users\Satel\OneDrive - SATEL\Portal - Censo IP\2024\MUNICIPIOS"
 
 # Diretório onde os caches por município são gravados
 LEVANTAMENTOS_CACHE_DIR = "../data/cache_levantamentos"
