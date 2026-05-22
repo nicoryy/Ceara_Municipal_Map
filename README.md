@@ -10,26 +10,9 @@
 [![HTML](https://img.shields.io/badge/HTML-5-E34F26?style=flat-square&logo=html5&logoColor=white)](https://developer.mozilla.org/en-US/docs/Web/HTML)
 [![License](https://img.shields.io/badge/License-MIT-purple?style=flat-square)](LICENSE)
 
-![Ceará Municipal Map preview](public/profile.png)
+<video src="public/projeto_mapa.mp4" controls width="700"></video>
 
 </div>
-
----
-
-## 🎥 Demo
-
-> **Espaço reservado para vídeo do funcionamento do projeto.**
->
-> _Adicione aqui um vídeo curto demonstrando: navegação pelo mapa, filtros cumulativos, busca por município, troca entre camadas geográficas, painel de detalhes e leitura ao vivo dos dados da planilha._
-
-<!--
-Para inserir o vídeo:
-- Faça upload de um GIF ou MP4 na pasta `public/`
-- Substitua este bloco por: ![demo](public/demo.gif)
-- Ou use a sintaxe HTML <video> apontando para o arquivo
--->
-
----
 
 ## 🇬🇧 English
 
