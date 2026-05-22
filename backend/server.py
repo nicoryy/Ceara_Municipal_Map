@@ -13,6 +13,7 @@ import sys
 import os
 import io
 import json
+import re
 import zipfile
 import logging
 from datetime import datetime
@@ -100,47 +101,27 @@ def _resolver_nome(key: str) -> str:
     return k
 
 
-def _info_municipio_por_chave(key: str) -> dict:
+def _bases_levantamento_ordenadas() -> list:
     """
-    Retorna o registro da planilha ({status, tipo, ano, municipio}) para a chave
-    da URL. Aceita IBGE (digitos) ou nome de regional. Retorna {} se ausente.
-    """
-    try:
-        dados = _get_dados()
-    except Exception:
-        return {}
-    k = key.strip()
-    if k.isdigit() and len(k) <= 7:
-        return dados.get(k.zfill(7), {}) or {}
-    for info in dados.values():
-        if (info.get("municipio") or "").strip() == k:
-            return info
-    return {}
+    Bases de levantamento ordenadas por ano decrescente — sempre comeca pelo
+    ano mais recente e cai em fallback ate o mais antigo definido.
 
-
-def _bases_levantamento(info: dict) -> list:
+    - LEVANTAMENTOS_BASE_PATH e tratada como a base do ano atual (mais recente).
+    - LEVANTAMENTOS_BASE_PATH_<ANO> sao bases de anos anteriores; o sufixo
+      numerico do attr define a ordem (maior primeiro).
+    Entradas vazias/None sao ignoradas.
     """
-    Decide a ordem de pastas a procurar para o levantamento, com base em
-    ano e tipo do municipio:
-      - ano == "2024"     -> apenas 2024
-      - ano == "2025"     -> apenas 2025
-      - tipo == "RESSALVA"-> 2026 primeiro, fallback 2025, depois 2024
-      - caso contrario    -> apenas 2026
-    """
-    base_2026 = config.LEVANTAMENTOS_BASE_PATH
-    base_2025 = getattr(config, "LEVANTAMENTOS_BASE_PATH_2025", None)
-    base_2024 = getattr(config, "LEVANTAMENTOS_BASE_PATH_2024", None)
-    ano  = str(info.get("ano") or "").strip()
-    tipo = str(info.get("tipo") or "").strip().upper()
-
-    if ano == "2024" and base_2024:
-        return [base_2024]
-    if ano == "2025" and base_2025:
-        return [base_2025]
-    if tipo == "RESSALVA":
-        fallback = [b for b in (base_2025, base_2024) if b]
-        return [base_2026, *fallback]
-    return [base_2026]
+    base_atual = getattr(config, "LEVANTAMENTOS_BASE_PATH", None)
+    anteriores = []
+    for attr in dir(config):
+        m = re.fullmatch(r"LEVANTAMENTOS_BASE_PATH_(\d{4})", attr)
+        if not m:
+            continue
+        val = getattr(config, attr, None)
+        if val:
+            anteriores.append((int(m.group(1)), val))
+    anteriores.sort(key=lambda t: t[0], reverse=True)
+    return [b for b in [base_atual, *(v for _, v in anteriores)] if b]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -235,12 +216,8 @@ def areas_inacessiveis(key):
 def levantamento(key):
     try:
         nome  = _resolver_nome(key)
-        info  = _info_municipio_por_chave(key)
-        bases = _bases_levantamento(info)
-        log.info(
-            f"[levantamento] {nome} ano={info.get('ano','')!r} "
-            f"tipo={info.get('tipo','')!r} -> bases={bases}"
-        )
+        bases = _bases_levantamento_ordenadas()
+        log.info(f"[levantamento] {nome} -> bases={bases}")
         dados = carregar_levantamento(config, nome, bases=bases)
         return jsonify({
             "municipio": nome,
@@ -269,7 +246,6 @@ def export_municipio(key):
       - <slug>/LOTES/*.kml (raw, se existir)
     Os KMLs gerados (pontos, borda) sao montados pelo frontend.
     """
-    import re
     try:
         nome = _resolver_nome(key)
     except FileNotFoundError as e:
