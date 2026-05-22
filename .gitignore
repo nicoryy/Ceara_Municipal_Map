@@ -36,6 +36,9 @@ desktop.ini
 # Logs
 *.log
 
+# Conteúdo pessoal / divulgação
+linkedin.md
+
 # Dados sensíveis — nunca commitar planilhas reais
 *.xlsx
 *.xlsm

@@ -2,7 +2,7 @@
 
 # 🗺️ Ceará Municipal Map
 
-**A lightweight, local-first territorial dashboard for visualizing all 184 municipalities of Ceará — with real-time status from your own spreadsheet.**
+**A lightweight, local-first territorial dashboard for visualizing all 184 municipalities of Ceará — with live data pulled from local spreadsheets.**
 
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
 [![Flask](https://img.shields.io/badge/Flask-3.0-000000?style=flat-square&logo=flask&logoColor=white)](https://flask.palletsprojects.com)
@@ -16,130 +16,75 @@
 
 ---
 
+## 🎥 Demo
+
+> **Espaço reservado para vídeo do funcionamento do projeto.**
+>
+> _Adicione aqui um vídeo curto demonstrando: navegação pelo mapa, filtros cumulativos, busca por município, troca entre camadas geográficas, painel de detalhes e leitura ao vivo dos dados da planilha._
+
+<!--
+Para inserir o vídeo:
+- Faça upload de um GIF ou MP4 na pasta `public/`
+- Substitua este bloco por: ![demo](public/demo.gif)
+- Ou use a sintaxe HTML <video> apontando para o arquivo
+-->
+
+---
+
 ## 🇬🇧 English
 
 ### What is this?
 
-A **local web application** that renders all 184 municipalities of Ceará (Brazil) on an interactive map, color-coded by operational status — pulled directly from an Excel spreadsheet you already use. Built for teams that need fast, visual decision-making about which municipalities to visit, prioritize, or escalate.
+A **local web application** that renders all 184 municipalities of Ceará (Brazil) on an interactive map and overlays multiple layers of operational data — pulled directly from spreadsheets you already use. Built for teams that need fast, visual decision-making over multi-dimensional territorial information, without leaving the desktop.
 
 No cloud. No SaaS. No per-seat pricing. Just Python + a browser.
 
 ### ✨ Features
 
 - **Interactive choropleth map** of all 184 Ceará municipalities via Leaflet.js
-- **Live data from Excel** — reads your open `.xlsx` or `.xlsm` via xlwings, falls back to the saved file via openpyxl automatically
-- **Smart cache** — detects file changes via `mtime`, never re-reads unnecessarily
-- **Status filter** — click any legend item to isolate municipalities by status
-- **Type filter** — secondary filter by a `tipo` column, cumulative with status
-- **Municipality search** — accent-insensitive search by name or IBGE code
-- **Click-to-detail panel** — shows name, IBGE code, status badge, and type on click
-- **One-click reload** — refresh data from the spreadsheet without restarting the server
-- **Fully configurable** — all column names, colors, file paths and port set in a single `config.py`
-- **Dark UI** — low-fatigue interface designed for extended operational use
-- **Lightweight** — ~65 MB RAM total, runs on a 8 GB notebook alongside Excel
+- **Live spreadsheet integration** — reads open `.xlsx` / `.xlsm` files via xlwings, with automatic openpyxl fallback when the file is closed
+- **Multi-source overlay** — multiple categories of data displayed on the same map, organized by year and type
+- **Map layer switcher** — switch between street, light, dark and satellite (hybrid) base maps
+- **Special administrative regions** — Fortaleza is broken into its 12 regionals, each colored by its own status
+- **Smart caching** — detects file changes via `mtime`, avoids unnecessary reads
+- **Cumulative filters** — combine status and type filters; both apply to all overlays
+- **Accent-insensitive search** — find municipalities by name or IBGE code
+- **Detail panel** — click any feature for name, status, type and metadata
+- **Point-level inspection** — open detailed survey markers per municipality with year/type routing
+- **Inaccessible area polygons** — render KML/spreadsheet-driven polygons of restricted zones
+- **Transformer overlays** — group point markers by source file with sidebar selection
+- **Export** — save filtered subsets for sharing
+- **One-click reload** — refresh all sources without restarting the server
+- **Dark UI** — low-fatigue interface for extended operational use
+- **Lightweight** — runs comfortably alongside Excel on a typical work notebook
 
 ### 🏗️ Architecture
 
 ```
-Excel / .xlsm (OneDrive)
+Local spreadsheets (.xlsx / .xlsm)
         │
         ▼
-  Python Flask server
-  ├── xlwings   → reads live data if Excel is open
+  Python Flask backend
+  ├── xlwings   → live read while the file is open
   ├── openpyxl  → fallback from saved file on disk
-  └── mtime cache → only reprocesses when file changes
+  └── mtime cache → only reprocesses on change
         │
-        ▼ REST API  GET /municipios
+        ▼ REST API
         │
   Leaflet.js frontend
-  ├── GeoJSON (Ceará, ~11 MB, exported from QGIS)
-  ├── Status filter
-  ├── Type filter
-  └── Municipality search
-```
-
-### ⚡ Quick Start
-
-**1. Clone and install**
-```bash
-git clone https://github.com/nicoryy/ceara-municipal-map.git
-cd ceara-municipal-map/backend
-pip install -r requirements.txt
-```
-
-**2. Add your GeoJSON**
-
-Export the Ceará municipal boundary shapefile from QGIS as GeoJSON and place it at:
-```
-frontend/municipios_ce.geojson
-```
-The field `codigo_ibg` (IBGE code) and `Municipio` (name) are expected — other common field names are auto-detected as fallback.
-
-**3. Configure**
-
-Edit `backend/config.py`:
-```python
-PLANILHA_PATH = r"C:\Users\You\OneDrive\your_spreadsheet.xlsm"
-PLANILHA_ABA  = "sheet_name"
-COLUNA_CODIGO_IBGE = "codigo_ibge"
-COLUNA_STATUS      = "status"
-COLUNA_TIPO        = "tipo"
-
-STATUS_CORES = {
-    "active":   "#1D9E75",
-    "pending":  "#EF9F27",
-    "blocked":  "#E24B4A",
-}
-```
-
-**4. Run**
-```bash
-python server.py
-# Open: http://localhost:5000
-```
-
-### 📋 Spreadsheet format
-
-Your sheet must have at least:
-
-| codigo_ibge | status | tipo |
-|---|---|---|
-| 2304400 | active | NORMAL |
-| 2301000 | pending | RESSALVA |
-
-Column names are configurable. IBGE codes are zero-padded automatically.
-
-### 🔌 API Endpoints
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/municipios` | Returns all municipalities with status and color |
-| `POST` | `/reload` | Forces spreadsheet re-read |
-| `GET` | `/status` | Cache metadata |
-
-### 🗂️ Project Structure
-
-```
-ceara-municipal-map/
-├── backend/
-│   ├── config.py           ← edit this first
-│   ├── server.py           ← Flask API
-│   ├── planilha_reader.py  ← xlwings + openpyxl reader
-│   └── requirements.txt
-├── frontend/
-│   ├── index.html          ← full UI (single file)
-│   └── municipios_ce.geojson  ← add yours here (not included)
-├── data/
-│   └── cache_dados.json    ← auto-generated
-└── README.md
+  ├── GeoJSON (municipal boundaries)
+  ├── GeoJSON (Fortaleza administrative regions)
+  ├── KML overlays (point datasets)
+  ├── Filters (status, type, year)
+  ├── Map layer switcher
+  └── Search + detail panel
 ```
 
 ### 🔧 Requirements
 
 - Python 3.10+
-- Excel (for xlwings live reading — optional, openpyxl works without it)
-- A GeoJSON of Ceará municipalities (exportable from QGIS via IBGE shapefiles)
-- A spreadsheet with `codigo_ibge` and `status` columns
+- Excel (optional — only required for live reading via xlwings; openpyxl handles the closed-file case)
+- A modern browser
 
 ---
 
@@ -147,79 +92,56 @@ ceara-municipal-map/
 
 ### O que é isso?
 
-Uma **aplicação web local** que renderiza todos os 184 municípios do Ceará em um mapa interativo, colorido por status operacional — lido diretamente de uma planilha Excel que você já usa. Desenvolvida para equipes que precisam tomar decisões rápidas e visuais sobre quais municípios visitar, priorizar ou escalar.
+Uma **aplicação web local** que renderiza os 184 municípios do Ceará em um mapa interativo e sobrepõe múltiplas camadas de dados operacionais — lidos diretamente de planilhas que você já usa. Desenvolvida para equipes que precisam tomar decisões rápidas e visuais sobre informações territoriais multi-dimensionais, sem sair do desktop.
 
 Sem nuvem. Sem SaaS. Sem cobrança por usuário. Só Python + um navegador.
 
 ### ✨ Funcionalidades
 
 - **Mapa coroplético interativo** dos 184 municípios do Ceará via Leaflet.js
-- **Dados ao vivo do Excel** — lê o arquivo `.xlsx` ou `.xlsm` aberto via xlwings, com fallback automático para o arquivo salvo via openpyxl
-- **Cache inteligente** — detecta mudanças no arquivo via `mtime`, sem releituras desnecessárias
-- **Filtro por status** — clique em um item da legenda para isolar municípios por status
-- **Filtro por tipo** — filtro secundário pela coluna `tipo`, cumulativo com o status
-- **Busca de município** — busca sem acento por nome ou código IBGE
-- **Painel de detalhes** — exibe nome, código IBGE, badge de status e tipo ao clicar
-- **Reload com um clique** — atualiza dados da planilha sem reiniciar o servidor
-- **Totalmente configurável** — nomes de colunas, cores, caminhos e porta definidos em um único `config.py`
+- **Integração ao vivo com planilhas** — lê arquivos `.xlsx` / `.xlsm` abertos via xlwings, com fallback automático para openpyxl quando o arquivo está fechado
+- **Sobreposição multi-fonte** — várias categorias de dados exibidas no mesmo mapa, organizadas por ano e tipo
+- **Troca de camadas de mapa** — alterna entre fundo de ruas, claro, escuro e satélite (híbrido)
+- **Regiões administrativas especiais** — Fortaleza dividida em suas 12 regionais, cada uma com cor própria de acordo com seu status
+- **Cache inteligente** — detecta mudanças via `mtime`, sem releituras desnecessárias
+- **Filtros cumulativos** — combine filtro de status e tipo; ambos aplicam a todas as camadas
+- **Busca sem acentos** — encontre municípios por nome ou código IBGE
+- **Painel de detalhes** — clique em qualquer elemento para nome, status, tipo e metadados
+- **Inspeção em nível de ponto** — abre marcadores detalhados de levantamento por município, com roteamento por ano/tipo
+- **Polígonos de áreas inacessíveis** — renderiza zonas restritas a partir de KML/planilha
+- **Sobreposição de transformadores** — agrupa marcadores por arquivo de origem com sidebar de seleção
+- **Exportação** — salva subconjuntos filtrados para compartilhamento
+- **Reload em um clique** — atualiza todas as fontes sem reiniciar o servidor
 - **Interface escura** — baixa fadiga visual para uso operacional prolongado
-- **Leve** — ~65 MB de RAM total, roda em notebook de 8 GB junto com o Excel aberto
+- **Leve** — roda confortavelmente junto com o Excel em um notebook típico de trabalho
 
-### ⚡ Como rodar
+### 🏗️ Arquitetura
 
-**1. Clone e instale**
-```bash
-git clone https://github.com/nicoryy/ceara-municipal-map.git
-cd ceara-municipal-map/backend
-pip install -r requirements.txt
+```
+Planilhas locais (.xlsx / .xlsm)
+        │
+        ▼
+  Backend Python (Flask)
+  ├── xlwings   → leitura ao vivo enquanto o arquivo está aberto
+  ├── openpyxl  → fallback do arquivo salvo em disco
+  └── cache mtime → só reprocessa quando o arquivo muda
+        │
+        ▼ API REST
+        │
+  Frontend Leaflet.js
+  ├── GeoJSON (limites municipais)
+  ├── GeoJSON (regiões administrativas de Fortaleza)
+  ├── Sobreposições KML (pontos)
+  ├── Filtros (status, tipo, ano)
+  ├── Troca de camada de mapa
+  └── Busca + painel de detalhes
 ```
 
-**2. Adicione seu GeoJSON**
+### 🔧 Requisitos
 
-Exporte a malha municipal do Ceará do QGIS como GeoJSON e coloque em:
-```
-frontend/municipios_ce.geojson
-```
-
-**3. Configure**
-
-Edite `backend/config.py`:
-```python
-PLANILHA_PATH = r"C:\Users\Voce\OneDrive\sua_planilha.xlsm"
-PLANILHA_ABA  = "nome_da_aba"
-COLUNA_CODIGO_IBGE = "codigo_ibge"
-COLUNA_STATUS      = "status"
-COLUNA_TIPO        = "tipo"
-
-STATUS_CORES = {
-    "ativo":      "#1D9E75",
-    "pendente":   "#EF9F27",
-    "bloqueado":  "#E24B4A",
-}
-```
-
-**4. Execute**
-```bash
-python server.py
-# Acesse: http://localhost:5000
-```
-
-### 📋 Formato da planilha
-
-A aba configurada deve ter ao menos:
-
-| codigo_ibge | status | tipo |
-|---|---|---|
-| 2304400 | ativo | NORMAL |
-| 2301000 | pendente | RESSALVA |
-
-Os nomes das colunas são configuráveis. Zeros à esquerda no código IBGE são corrigidos automaticamente.
-
-### 📌 Observações
-
-- O arquivo GeoJSON **não está incluído** no repositório por ser um dado governamental volumoso. Exporte pelo QGIS a partir da malha municipal do IBGE/IPECE.
-- O xlwings só é usado se o Excel **já estiver com o arquivo aberto** — nunca abre o arquivo em background.
-- Se o Excel estiver fechado ou o arquivo bloqueado pelo OneDrive, o openpyxl lê o último save em disco automaticamente.
+- Python 3.10+
+- Excel (opcional — necessário apenas para leitura ao vivo via xlwings; o openpyxl cobre o caso de arquivo fechado)
+- Um navegador moderno
 
 ### 📄 Licença
 
