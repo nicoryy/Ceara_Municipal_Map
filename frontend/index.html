@@ -1115,7 +1115,13 @@
 
     aplicarMapType(0);
 
-    // Renderer canvas compartilhado para os pontos do levantamento (alto throughput)
+    // Canvas UNICO compartilhado entre poligonos e pontos.
+    // Motivo: um <canvas> captura todos os eventos na sua bounding box (diferente
+    // de <svg>, que leva pointer-events:none no container). Se houver dois canvases
+    // no mesmo pane, o de cima engole cliques mesmo quando esta vazio — foi o que
+    // quebrava o mapa depois de sair do levantamento (o canvas dos pontos ficava
+    // attached e em cima do canvas dos poligonos). Com um unico canvas o hit-test
+    // do Leaflet itera todos os paths (poligonos + markers) e acha o certo.
     const canvasRenderer = L.canvas({ padding: 0.5 });
 
     const CE_BOUNDS = L.latLngBounds(L.latLng(-7.86, -41.43), L.latLng(-2.78, -37.25));
@@ -1279,7 +1285,7 @@
 
     async function carregarGeojson() {
       try {
-        const r = await fetch("/municipios_ce.geojson");
+        const r = await fetch("/municipios_ce.min.geojson");
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         geojsonData = await r.json();
 
@@ -1292,6 +1298,7 @@
           }),
         };
         geojsonLayer = L.geoJSON(featuresFiltered, {
+          renderer: canvasRenderer,
           style: f => {
             const { ibge } = extrairPropriedades(f.properties);
             return getEstilo(ibge);
@@ -1357,6 +1364,7 @@
         regionaisData = await r.json();
 
         regionaisLayer = L.geoJSON(regionaisData, {
+          renderer: canvasRenderer,
           style: f => {
             const chave = chaveRegional(f.properties);
             return getEstiloRegional(chave);
