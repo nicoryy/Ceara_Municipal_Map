@@ -140,6 +140,47 @@
       font-family: monospace;
     }
 
+    /* ── tombamento (filtro por TRANSFORMADOR no levantamento) ── */
+    .tombamento-wrap {
+      position: relative;
+      flex: 0 0 160px;
+    }
+
+    #tombamento {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-size: 13px;
+      padding: 7px 12px 7px 32px;
+      outline: none;
+      transition: border-color .2s, opacity .2s;
+    }
+
+    #tombamento:focus {
+      border-color: var(--accent);
+    }
+
+    #tombamento::placeholder {
+      color: var(--muted);
+    }
+
+    #tombamento:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+    }
+
+    .tombamento-icon {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      pointer-events: none;
+      font-size: 14px;
+    }
+
     /* ── botão reload ── */
     #btn-reload {
       display: flex;
@@ -914,6 +955,11 @@
       <div id="busca-resultados"></div>
     </div>
 
+    <div class="tombamento-wrap" title="Disponível ao entrar no levantamento de um município">
+      <span class="tombamento-icon">⌗</span>
+      <input id="tombamento" type="text" placeholder="Tombamento" autocomplete="off" disabled>
+    </div>
+
     <button id="btn-maptype" title="Trocar tipo de mapa">
       <span class="ri">◐</span>
       <span id="btn-maptype-label">Escuro</span>
@@ -1052,11 +1098,21 @@
     let dataAte = null;   // Date atual (limite superior)
     let levantamentoMarkers = new Map();  // chaveCoord -> { layer, group }
 
+    // Filtro por TRANSFORMADOR (Tombamento) no levantamento. Texto normalizado
+    // (uppercase/trim); vazio = sem filtro.
+    let filtroTombamento = "";
+
     // Constantes de cor dos pontos (espelham backend/config.py)
     const COR_MEDICAO_SIM = "#7CFC00";
     const COR_MEDICAO_NAO = "#1E3A8A";
     const COR_SEM_DADO    = "#B4B2A9";
     const COR_TRAFO       = "#FFFFFF";   // branco
+
+    // Pontos com PONTOTRAFO = SIM recebem cor destacada conforme a MEDICAO:
+    //   CADASTRO (azul,  MEDICAO != SIM) -> rosa
+    //   INSPECAO (verde, MEDICAO == SIM) -> vermelho
+    const COR_PONTOTRAFO_CADASTRO = "#FF3DA6";  // rosa
+    const COR_PONTOTRAFO_INSPECAO = "#E11D1D";  // vermelho
 
     // Ordem das colunas exibidas no painel (espelha COLUNAS_LEVANTAMENTO)
     const COLUNAS_LEVANTAMENTO = [
@@ -1841,6 +1897,12 @@
         document.getElementById("btn-transformadores").classList.add("show");
         document.getElementById("btn-areas").classList.add("show");
         document.getElementById("btn-download").classList.add("show");
+        // habilita o filtro de tombamento (so faz sentido dentro do levantamento)
+        filtroTombamento = "";
+        const inpTomb = document.getElementById("tombamento");
+        inpTomb.value = "";
+        inpTomb.disabled = false;
+        inpTomb.title = "Filtra os pontos pelo campo TRANSFORMADOR";
         configurarRangeData(json.pontos || []);
       } catch (e) {
         console.error("Erro ao carregar levantamento:", e);
@@ -1887,7 +1949,12 @@
 
     function corDoPonto(p) {
       const m = String(p.MEDICAO || "").trim().toUpperCase();
-      return m === "SIM" ? COR_MEDICAO_SIM : COR_MEDICAO_NAO;
+      const ehInspecao = m === "SIM";
+      const trafo = String(p.PONTOTRAFO || "").trim().toUpperCase();
+      if (trafo === "SIM") {
+        return ehInspecao ? COR_PONTOTRAFO_INSPECAO : COR_PONTOTRAFO_CADASTRO;
+      }
+      return ehInspecao ? COR_MEDICAO_SIM : COR_MEDICAO_NAO;
     }
 
     function chaveCoord(lat, lng) {
@@ -1944,7 +2011,7 @@
         if (grupo.length > 1) {
           marker.on("click", (e) => {
             L.DomEvent.stopPropagation(e);
-            const visiveis = grupo.filter(pontoDentroDoFiltroData);
+            const visiveis = grupo.filter(pontoVisivel);
             if (visiveis.length === 1) {
               mostrarPontoNoPainel(visiveis[0]);
             } else if (visiveis.length > 1) {
@@ -1954,7 +2021,7 @@
         } else {
           marker.on("click", (e) => {
             L.DomEvent.stopPropagation(e);
-            if (pontoDentroDoFiltroData(rep)) mostrarPontoNoPainel(rep);
+            if (pontoVisivel(rep)) mostrarPontoNoPainel(rep);
           });
         }
         marker.addTo(levantamentoLayer);
@@ -2283,14 +2350,25 @@
       return startOfDay(d).getTime() <= startOfDay(dataAte).getTime();
     }
 
-    function aplicarFiltroData() {
+    function pontoDentroDoFiltroTombamento(p) {
+      if (!filtroTombamento) return true;
+      return String(p.TRANSFORMADOR || "").toUpperCase().includes(filtroTombamento);
+    }
+
+    // Predicado combinado: um ponto so e exibido se passa por todos os filtros
+    // ativos do modo levantamento (data + tombamento).
+    function pontoVisivel(p) {
+      return pontoDentroDoFiltroData(p) && pontoDentroDoFiltroTombamento(p);
+    }
+
+    function aplicarFiltros() {
       if (!levantamentoLayer) return;
       unspiderfy();
       // Para cada grupo de coordenada, exibe apenas se algum ponto passa o filtro.
       // Reusa stackGroups + levantamentoMarkers.
       for (const [k, info] of levantamentoMarkers) {
         const grupo = info.group;
-        const visiveis = grupo.filter(pontoDentroDoFiltroData);
+        const visiveis = grupo.filter(pontoVisivel);
         if (visiveis.length === 0) {
           if (info.layer && levantamentoLayer.hasLayer(info.layer)) {
             levantamentoLayer.removeLayer(info.layer);
@@ -2308,7 +2386,13 @@
       const dias = parseInt(document.getElementById("data-range").value, 10) || 0;
       dataAte = new Date(dataMin.getTime() + dias * 86400000);
       document.getElementById("data-range-cur").textContent = fmtData(dataAte);
-      aplicarFiltroData();
+      aplicarFiltros();
+    }
+
+    function onTombamentoInput() {
+      filtroTombamento = String(document.getElementById("tombamento").value || "")
+        .trim().toUpperCase();
+      aplicarFiltros();
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -2329,7 +2413,7 @@
     }
 
     function pontosVisiveisParaExport() {
-      return levantamentoPontos.filter(pontoDentroDoFiltroData);
+      return levantamentoPontos.filter(pontoVisivel);
     }
 
     function geomToKmlCoords(geom) {
@@ -2555,6 +2639,13 @@
       document.getElementById("data-range-wrap").classList.remove("show");
       dataMin = dataMax = dataAte = null;
 
+      // reseta e desabilita o filtro de tombamento ao sair do levantamento
+      filtroTombamento = "";
+      const inpTomb = document.getElementById("tombamento");
+      inpTomb.value = "";
+      inpTomb.disabled = true;
+      inpTomb.title = "Disponível ao entrar no levantamento de um município";
+
       levantamentoPontos = [];
       stackGroups = null;
       levantamentoMarkers = new Map();
@@ -2606,6 +2697,7 @@
     document.getElementById("btn-download").addEventListener("click", exportarDados);
     document.getElementById("btn-maptype").addEventListener("click", cicloMapType);
     document.getElementById("data-range").addEventListener("input", onDataRangeInput);
+    document.getElementById("tombamento").addEventListener("input", onTombamentoInput);
 
     // Lista de KMLs de transformadores — delegacao de evento para checkboxes
     document.getElementById("kml-trafos-lista").addEventListener("change", (e) => {
