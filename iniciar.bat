@@ -1,10 +1,10 @@
 @echo off
 setlocal enabledelayedexpansion
-title Mapa Municipal - SATEL
+title Mapa Municipal
 cd /d "%~dp0"
 
 echo ============================================================
-echo   Mapa Municipal - SATEL
+echo   Mapa Municipal
 echo   Verificacao de ambiente
 echo ============================================================
 echo.
@@ -36,8 +36,8 @@ echo.
 REM ============================================================
 REM 2. Dependencias instaladas?
 REM ============================================================
-echo [2/3] Verificando bibliotecas Python (flask, flask-cors, openpyxl)...
-python -c "import flask, flask_cors, openpyxl" >nul 2>nul
+echo [2/3] Verificando bibliotecas Python (flask, flask-cors, openpyxl, dotenv)...
+python -c "import flask, flask_cors, openpyxl, dotenv" >nul 2>nul
 if errorlevel 1 (
     echo.
     echo   [AVISO] Faltam bibliotecas necessarias para rodar o sistema.
@@ -72,33 +72,32 @@ if "!ERRO_FATAL!"=="1" (
 )
 
 REM ============================================================
-REM 3. Portal Censo IP sincronizado no OneDrive?
+REM 3. Arquivo .env configurado?
 REM ============================================================
-echo [3/3] Verificando pasta "Portal - Censo IP" no OneDrive...
-set "PORTAL_PATH=%USERPROFILE%\OneDrive - SATEL\Portal - Censo IP"
-if not exist "%PORTAL_PATH%" (
+echo [3/3] Verificando arquivo .env (caminhos da planilha e das pastas)...
+if not exist "%~dp0.env" (
     echo.
-    echo   [AVISO] Pasta nao encontrada em:
-    echo     %PORTAL_PATH%
+    echo   [AVISO] Arquivo .env nao encontrado.
+    echo   Esses caminhos sao especificos da empresa/computador e por isso
+    echo   nao vem prontos no projeto.
     echo.
-    echo   Isso normalmente significa que a pasta "Portal - Censo IP" ainda
-    echo   nao foi adicionada como atalho no seu OneDrive, ou a sincronizacao
-    echo   ainda nao terminou.
-    echo.
-    echo   Como resolver:
-    echo     1. Abra o link do Portal Censo IP no SharePoint/OneDrive
-    echo     2. Clique com o botao direito na pasta "Portal - Censo IP"
-    echo     3. Selecione "Adicionar atalho ao OneDrive"
-    echo     4. Aguarde o OneDrive terminar de sincronizar
-    echo.
-    echo   Veja o LEIA-ME.md para o link exato.
-    echo.
-    choice /C SN /N /M "  Deseja continuar mesmo assim? (S = Sim / N = Nao): "
-    if errorlevel 2 (
-        exit /b 1
+    if exist "%~dp0.env.example" (
+        copy /y "%~dp0.env.example" "%~dp0.env" >nul
+        echo   Criei o arquivo .env a partir de .env.example.
+        echo   Abrindo no Bloco de Notas para voce preencher os caminhos reais...
+        start "" notepad "%~dp0.env"
+        echo.
+        echo   Preencha os caminhos, salve o arquivo, feche e execute o
+        echo   iniciar.bat novamente.
+    ) else (
+        echo   [ERRO] .env.example tambem nao foi encontrado. Peca este
+        echo   arquivo para quem administra o projeto.
     )
+    echo.
+    pause
+    exit /b 1
 ) else (
-    echo   OK - Pasta do Portal encontrada.
+    echo   OK - Arquivo .env encontrado.
 )
 echo.
 

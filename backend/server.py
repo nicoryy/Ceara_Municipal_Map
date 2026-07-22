@@ -324,7 +324,7 @@ def static_files(filename):
 
 if __name__ == "__main__":
     log.info("=" * 52)
-    log.info("  Mapa Municipal — SATEL")
+    log.info("  Mapa Municipal")
     log.info("=" * 52)
     log.info(f"  Planilha : {config.PLANILHA_PATH}")
     log.info(f"  Aba      : {config.PLANILHA_ABA}")
@@ -337,7 +337,7 @@ if __name__ == "__main__":
         log.info(f"  Dados carregados: {_estado['total']} municipios via {_estado['fonte']}")
     except Exception as e:
         log.warning(f"  Aviso na inicializacao: {e}")
-        log.warning("  O mapa abrira sem dados. Corrija config.py e clique em Recarregar.")
+        log.warning("  O mapa abrira sem dados. Corrija o .env e clique em Recarregar.")
 
     log.info(f"  Acesse: http://localhost:{config.SERVER_PORT}")
     log.info("=" * 52)

@@ -159,10 +159,13 @@ function aplicarEstiloSelecionadoRegional(layer, chave) { ... }
 
 ## Config atual relevante
 
+Caminhos reais (planilha, pastas por ano/município, prefixo de arquivo) **não ficam em `config.py`** — são sensíveis (nome da empresa e do portal interno) e vêm de um `.env` na raiz do projeto, nunca commitado (veja `.env.example` para o template e `LEIA-ME.md` para instruções). `config.py` só lê essas variáveis via `os.environ` e falha com uma mensagem clara se `.env` não existir.
+
+O que permanece fixo em `backend/config.py` (não sensível):
+
 ```python
 # backend/config.py
-PLANILHA_PATH      = r"C:\Users\Satel\OneDrive - SATEL\Portal - Censo IP\Censo IP 2026.xlsm"
-PLANILHA_ABA       = "tecnico"
+PLANILHA_ABA       = "tecnico"          # valor padrão, sobrescrevível via .env
 COLUNA_CODIGO_IBGE = "codigo_ibge"
 COLUNA_STATUS      = "status"
 COLUNA_TIPO        = "tipo"
@@ -178,7 +181,7 @@ STATUS_CORES = {
 COR_SEM_DADO  = "#B4B2A9"
 GEOJSON_PATH  = "../frontend/municipios_ce.geojson"
 CACHE_PATH    = "../data/cache_dados.json"
-SERVER_PORT   = 5000
+SERVER_PORT   = 5000                    # valor padrão, sobrescrevível via .env
 ```
 
 ---

@@ -1,8 +1,10 @@
-# LEIA-ME — Como rodar o Mapa Municipal (SATEL)
+# LEIA-ME — Como rodar o Mapa Municipal
 
-Este guia serve para qualquer colega conseguir rodar o sistema em um computador Windows **sem precisar perguntar nada a mais**. Siga as 3 verificações abaixo, na ordem.
+Este guia serve para qualquer colega conseguir rodar o sistema em um computador Windows **sem precisar perguntar nada a mais**. Siga as verificações abaixo, na ordem.
 
-> ⚡ **Atalho:** dê 2 cliques em [`iniciar.bat`](iniciar.bat), na raiz do projeto. Ele faz essas 3 verificações sozinho, avisa o que estiver faltando e, se tudo estiver certo, já abre o sistema. As seções abaixo explicam o que o script verifica e como resolver manualmente, caso ele aponte algum problema.
+> ⚡ **Atalho:** dê 2 cliques em [`iniciar.bat`](iniciar.bat), na raiz do projeto. Ele faz essas verificações sozinho, avisa o que estiver faltando e, se tudo estiver certo, já abre o sistema. As seções abaixo explicam o que o script verifica e como resolver manualmente, caso ele aponte algum problema.
+
+> 🔒 **Nota de segurança:** os caminhos reais de rede/OneDrive e nomes internos da empresa **não ficam no código** — ficam só no seu arquivo `.env` local, que nunca é enviado ao git. Veja o passo 3.
 
 ---
 
@@ -12,9 +14,9 @@ Este guia serve para qualquer colega conseguir rodar o sistema em um computador 
 |---|---|---|---|
 | 1 | Python 3.10+ instalado | `python --version` no terminal | Instalar pela Microsoft Store |
 | 2 | Bibliotecas Python instaladas | `pip show flask` no terminal | `pip install -r backend\requirements.txt` |
-| 3 | Pasta "Portal - Censo IP" sincronizada no OneDrive | Ver se a pasta existe em `%OneDrive%` | Adicionar atalho da pasta no OneDrive e aguardar sincronizar |
+| 3 | Arquivo `.env` configurado com os caminhos da sua pasta sincronizada | Ver se existe `.env` na raiz do projeto | Copiar `.env.example` para `.env` e preencher os caminhos |
 
-Se as três estiverem OK, o sistema **vai funcionar sem nenhum problema**.
+Se os três estiverem OK, o sistema **vai funcionar sem nenhum problema**.
 
 ---
 
@@ -53,6 +55,7 @@ Isso instala automaticamente:
 - `flask-cors` — libera o frontend a consultar o backend
 - `openpyxl` — leitura da planilha quando ela está fechada
 - `xlwings` — leitura da planilha **ao vivo**, enquanto ela está aberta no Excel (opcional, mas recomendado)
+- `python-dotenv` — carrega o arquivo `.env` do passo 3
 
 Se o comando terminar sem erros em vermelho, está tudo pronto. Para confirmar, rode:
 
@@ -64,25 +67,22 @@ Se imprimir `OK`, as dependências estão instaladas corretamente.
 
 ---
 
-## 3. Você tem o Portal Censo IP vinculado no seu OneDrive?
+## 3. Você configurou o arquivo `.env` com os caminhos da sua pasta sincronizada?
 
-O sistema lê a planilha diretamente desta pasta:
+O sistema lê a planilha e as pastas por município a partir de caminhos que **variam por empresa e por computador** — por isso eles não ficam no código, ficam num arquivo `.env` local (nunca commitado).
 
-```
-C:\Users\<seu usuário>\OneDrive - SATEL\Portal - Censo IP\Censo IP 2026.xlsm
-```
+### Como configurar
 
-Se essa pasta não existir no seu computador, o sistema não vai encontrar a planilha e vai mostrar um erro de "arquivo não encontrado".
+1. Copie o arquivo [`.env.example`](.env.example) (raiz do projeto) e renomeie a cópia para **`.env`**.
+2. Abra o `.env` num editor de texto e preencha cada caminho com o local real, no seu computador, da pasta sincronizada onde ficam a planilha principal e as pastas por município/ano. Exemplo do formato esperado:
+   ```
+   PLANILHA_PATH=C:\Users\<seu usuário>\<sua pasta sincronizada>\<planilha>.xlsm
+   LEVANTAMENTOS_BASE_PATH=C:\Users\<seu usuário>\<sua pasta sincronizada>\2026\Municipios
+   ```
+3. Confirme que essa pasta está sincronizada no seu OneDrive/rede local antes de rodar o sistema — caso contrário, os arquivos não serão encontrados. Se precisar adicionar um atalho de uma pasta compartilhada ao seu OneDrive: clique com o botão direito na pasta de origem → **"Adicionar atalho ao OneDrive"** (ou **"Enviar a atalhos"**) → aguarde a sincronização terminar (ícone de nuvem para de girar).
+4. Peça o link da pasta compartilhada e os nomes/caminhos exatos a quem já roda o sistema, caso não os tenha.
 
-### Como vincular
-
-1. Abra o link do Portal Censo IP no SharePoint/OneDrive: **`[COLE AQUI O LINK DO SHAREPOINT DO "Portal - Censo IP"]`**
-2. Clique com o botão direito na pasta **"Portal - Censo IP"**.
-3. Selecione **"Adicionar atalho ao OneDrive"** (ou **"Enviar a atalhos"**, dependendo da versão).
-4. Abra o OneDrive (ícone de nuvem na bandeja do Windows, perto do relógio) e aguarde a sincronização terminar (o ícone para de girar quando termina).
-5. Confirme que a pasta apareceu em `Este PC > OneDrive - SATEL > Portal - Censo IP`.
-
-> ⚠️ **Preencha o link acima** antes de repassar este arquivo aos colegas — sem ele, essa etapa fica manual (peça o link para quem administra o SharePoint da SATEL).
+> ⚠️ **Nunca** adicione o arquivo `.env` ao git — ele já está no `.gitignore`, mas confira antes de fazer commit se tiver dúvida (`git status` não deve listar `.env`).
 
 ---
 
@@ -90,7 +90,7 @@ Se essa pasta não existir no seu computador, o sistema não vai encontrar a pla
 
 ### Opção A — Script automático (recomendado)
 
-Dê 2 cliques em **`iniciar.bat`** na raiz do projeto. Ele confere os 3 itens acima, oferece instalar o que faltar e, se tudo estiver certo, inicia o servidor e abre o navegador automaticamente em `http://localhost:5000`.
+Dê 2 cliques em **`iniciar.bat`** na raiz do projeto. Ele confere os itens acima — inclusive criando o `.env` a partir do `.env.example` automaticamente, se ainda não existir — e, se tudo estiver certo, inicia o servidor e abre o navegador em `http://localhost:5000`.
 
 ### Opção B — Manual
 
@@ -110,11 +110,12 @@ Para parar o servidor, volte ao terminal e pressione `Ctrl+C`.
 | Sintoma | Causa provável | Solução |
 |---|---|---|
 | `'python' não é reconhecido como um comando` | Python não instalado ou não está no PATH | Reinstale pela Microsoft Store (passo 1) e reabra o terminal |
-| `Arquivo não encontrado aberto no Excel` / erro ao ler planilha | Pasta do OneDrive não sincronizada, ou planilha com nome/caminho diferente | Confirme o passo 3; confira `backend/config.py` → `PLANILHA_PATH` |
+| `RuntimeError: Variavel de ambiente 'PLANILHA_PATH' nao definida` | Arquivo `.env` não existe ou está incompleto | Confira o passo 3 — copie `.env.example` para `.env` e preencha |
+| `Arquivo não encontrado aberto no Excel` / erro ao ler planilha | Pasta sincronizada não existe/não sincronizou, ou caminho no `.env` está errado | Confirme o passo 3; confira o valor de `PLANILHA_PATH` no seu `.env` |
 | `ModuleNotFoundError: No module named 'flask'` (ou similar) | Dependências não instaladas | Rode o comando do passo 2 |
-| Página abre mas o mapa fica cinza / sem dados | A planilha foi encontrada mas os nomes de aba/coluna não batem | Confira `PLANILHA_ABA` e as colunas em `backend/config.py` contra a planilha real |
-| `OSError: [WinError 10048]` / porta em uso | Já existe um servidor rodando na porta 5000 | Feche a outra instância do `python server.py`, ou mude `SERVER_PORT` em `backend/config.py` |
-| Levantamentos por município / transformadores / áreas inacessíveis não aparecem | Esses caminhos em `backend/config.py` (`LEVANTAMENTOS_BASE_PATH`, `TRANSFORMADORES_BASE_PATH`, `AREAS_INACESSIVEIS_BASE_PATH`) estão fixos com o usuário `Satel` — se seu usuário do Windows for diferente, o caminho não bate | Ajuste esses caminhos em `config.py` para o seu usuário, ou combine um valor fixo de equipe |
+| Página abre mas o mapa fica cinza / sem dados | A planilha foi encontrada mas os nomes de aba/coluna não batem | Confira `PLANILHA_ABA` no `.env` e as colunas em `backend/config.py` contra a planilha real |
+| `OSError: [WinError 10048]` / porta em uso | Já existe um servidor rodando na porta 5000 | Feche a outra instância do `python server.py`, ou mude `SERVER_PORT` no seu `.env` |
+| Levantamentos por município / transformadores / áreas inacessíveis não aparecem | As variáveis opcionais no `.env` (`LEVANTAMENTOS_BASE_PATH_2025/2024`, `TRANSFORMADORES_BASE_PATH`, `AREAS_INACESSIVEIS_BASE_PATH`) estão vazias ou com caminho errado | Preencha/corrija essas linhas no seu `.env` |
 
 ---
 
@@ -122,5 +123,5 @@ Para parar o servidor, volte ao terminal e pressione `Ctrl+C`.
 
 - **Backend:** Python 3.10+, Flask, xlwings (leitura ao vivo) + openpyxl (fallback)
 - **Frontend:** HTML/CSS/JS puro (Leaflet.js), servido pelo próprio Flask — não precisa de Node/npm
-- **Configuração central:** `backend/config.py` — caminhos de planilha, nomes de coluna e cores de status
+- **Configuração central:** `backend/config.py` (regras fixas, não sensíveis) + `.env` (caminhos e nomes sensíveis, local e não versionado)
 - **Porta padrão:** `5000`

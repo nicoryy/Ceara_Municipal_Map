@@ -1,18 +1,34 @@
 # =============================================================================
-# CONFIGURAÇÃO CENTRAL — edite este arquivo antes de rodar o servidor
+# CONFIGURAÇÃO CENTRAL
+# Caminhos e nomes específicos da empresa/portal ficam no .env (nunca no git).
+# Copie .env.example para .env na raiz do projeto e preencha os valores.
 # =============================================================================
 
 import os
+from dotenv import load_dotenv
 
-# Caminho absoluto ou relativo à planilha (xlsx ou xlsm)
-# Exemplos:
-#   Windows:  r"C:\Users\Nicory\OneDrive\{USERNAME}\mapa_municipios.xlsx"
-#   Relativo: "../data/mapa_municipios.xlsx"
-USERNAME = os.environ.get("USERNAME") or os.environ.get("USER") or "Satel"
-PLANILHA_PATH = rf"C:\Users\{USERNAME}\OneDrive - SATEL\Portal - Censo IP\Censo IP 2026.xlsm"
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env"))
+
+
+def _env_obrigatorio(nome):
+    valor = os.environ.get(nome)
+    if not valor:
+        raise RuntimeError(
+            f"Variavel de ambiente '{nome}' nao definida.\n"
+            f"Copie .env.example para .env na raiz do projeto e preencha os caminhos reais."
+        )
+    return valor
+
+
+def _env_opcional(nome, padrao=""):
+    return os.environ.get(nome, padrao)
+
+
+# Caminho absoluto da planilha principal (xlsx ou xlsm) — definido em .env
+PLANILHA_PATH = _env_obrigatorio("PLANILHA_PATH")
 
 # Nome exato da aba que contém os dados
-PLANILHA_ABA = "tecnico"
+PLANILHA_ABA = _env_opcional("PLANILHA_ABA", "tecnico")
 
 # Nome exato das colunas na planilha
 COLUNA_CODIGO_IBGE = "codigo_ibge"   # deve conter o código de 7 dígitos ex: 2304400
@@ -28,7 +44,7 @@ GEOJSON_PATH = "../frontend/municipios_ce.geojson"
 CACHE_PATH = "../data/cache_dados.json"
 
 # Porta do servidor local
-SERVER_PORT = 5000
+SERVER_PORT = int(_env_opcional("SERVER_PORT", "5000"))
 
 # =============================================================================
 # MAPEAMENTO DE STATUS → COR (hex ou nome CSS)
@@ -55,12 +71,18 @@ LARGURA_BORDA = 0
 # LEVANTAMENTO — planilhas por município (somente leitura)
 # =============================================================================
 # Base path onde ficam as pastas dos municípios. Estrutura esperada:
-#   <BASE>/<NOME_MUNICIPIO>/AUDITORIA/FECHAMENTO CENSO IP*.xlsm
+#   <BASE>/<NOME_MUNICIPIO>/AUDITORIA/<LEVANTAMENTO_ARQUIVO_PREFIXO>*.xlsm
 # Comparação de nomes é case-insensitive em todas as etapas.
-LEVANTAMENTOS_BASE_PATH      = rf"C:\Users\{USERNAME}\OneDrive - SATEL\Portal - Censo IP\2026\Municipios"
-LEVANTAMENTOS_BASE_PATH_2025 = rf"C:\Users\{USERNAME}\OneDrive - SATEL\Portal - Censo IP\2025\Municipios"
-LEVANTAMENTOS_BASE_PATH_2024 = rf"C:\Users\{USERNAME}\OneDrive - SATEL\Portal - Censo IP\2024\MUNICIPIOS"
-    
+# LEVANTAMENTOS_BASE_PATH e a base do ano atual (obrigatoria). As demais
+# LEVANTAMENTOS_BASE_PATH_<ANO> (anos anteriores) sao opcionais — o server
+# descobre automaticamente todas as que existirem no .env.
+LEVANTAMENTOS_BASE_PATH      = _env_obrigatorio("LEVANTAMENTOS_BASE_PATH")
+LEVANTAMENTOS_BASE_PATH_2025 = _env_opcional("LEVANTAMENTOS_BASE_PATH_2025")
+LEVANTAMENTOS_BASE_PATH_2024 = _env_opcional("LEVANTAMENTOS_BASE_PATH_2024")
+
+# Prefixo do nome do arquivo de levantamento dentro de AUDITORIA/
+LEVANTAMENTO_ARQUIVO_PREFIXO = _env_opcional("LEVANTAMENTO_ARQUIVO_PREFIXO", "FECHAMENTO")
+
 # Diretório onde os caches por município são gravados
 LEVANTAMENTOS_CACHE_DIR = "../data/cache_levantamentos"
 
@@ -100,7 +122,7 @@ COR_MEDICAO_NAO = "#1E3A8A"  # azul escuro
 #   <BASE>/<NOME_MUNICIPIO>/LOTES/*.kml
 # Nomes podem variar de caixa/acentos; o matching e feito normalizando
 # nomes para apenas alfanumericos em lowercase.
-TRANSFORMADORES_BASE_PATH = rf"C:\Users\{USERNAME}\OneDrive - SATEL\Portal - Censo IP\2026\INTERNO_ANALISE"
+TRANSFORMADORES_BASE_PATH = _env_opcional("TRANSFORMADORES_BASE_PATH")
 TRANSFORMADORES_LOTES_SUB = "LOTES"
 TRANSFORMADORES_CACHE_DIR = "../data/cache_transformadores"
 
@@ -110,6 +132,6 @@ TRANSFORMADORES_CACHE_DIR = "../data/cache_transformadores"
 # Estrutura esperada:
 #   <BASE>/<NOME_MUNICIPIO>/AREAS_INACESSIVEIS/*.gpkg
 # Mesma logica do transformadores, mas le .gpkg (GeoPackage) ao inves de .kml.
-AREAS_INACESSIVEIS_BASE_PATH = rf"C:\Users\{USERNAME}\OneDrive - SATEL\Portal - Censo IP\2026\INTERNO_ANALISE"
+AREAS_INACESSIVEIS_BASE_PATH = _env_opcional("AREAS_INACESSIVEIS_BASE_PATH")
 AREAS_INACESSIVEIS_SUB       = "AREAS_INACESSIVEIS"
 AREAS_INACESSIVEIS_CACHE_DIR = "../data/cache_areas_inacessiveis"

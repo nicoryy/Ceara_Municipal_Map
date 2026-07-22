@@ -2,7 +2,7 @@
 levantamento_reader.py
 
 Le a planilha de levantamento de um municipio especifico, formato:
-    <LEVANTAMENTOS_BASE_PATH>/<NOME>/AUDITORIA/FECHAMENTO CENSO IP*.xlsm
+    <LEVANTAMENTOS_BASE_PATH>/<NOME>/AUDITORIA/<LEVANTAMENTO_ARQUIVO_PREFIXO>*.xlsm
 
 Estrategia:
 - Apenas openpyxl em modo somente-leitura (sem xlwings).
@@ -54,7 +54,7 @@ def _find_municipio_folder(base: str, nome: str) -> str:
     raise FileNotFoundError(f"Pasta do municipio nao encontrada: {nome}")
 
 
-def _find_xlsm(folder: str) -> str:
+def _find_xlsm(folder: str, prefixo_arquivo: str) -> str:
     auditoria_alvo = os.path.join(folder, "AUDITORIA")
     log.info(f"[busca] Procurando subpasta AUDITORIA em: {folder}")
     auditoria = None
@@ -70,19 +70,20 @@ def _find_xlsm(folder: str) -> str:
         )
         raise FileNotFoundError(f"Pasta AUDITORIA nao encontrada em: {folder}")
 
-    log.info(f"[busca] Procurando arquivo 'FECHAMENTO CENSO IP*.xls[mx]' em: {auditoria}")
+    prefixo_up = prefixo_arquivo.upper()
+    log.info(f"[busca] Procurando arquivo '{prefixo_up}*.xls[mx]' em: {auditoria}")
     candidatos = []
     for entry in os.listdir(auditoria):
         ext = entry.lower()
-        if (ext.endswith(".xlsm") or ext.endswith(".xlsx")) and entry.upper().startswith("FECHAMENTO CENSO IP"):
+        if (ext.endswith(".xlsm") or ext.endswith(".xlsx")) and entry.upper().startswith(prefixo_up):
             candidatos.append(os.path.join(auditoria, entry))
     if not candidatos:
         log.warning(
-            f"[busca] FALHA: nenhum 'FECHAMENTO CENSO IP*.xls[mx]' em {auditoria}. "
+            f"[busca] FALHA: nenhum '{prefixo_up}*.xls[mx]' em {auditoria}. "
             f"Arquivos existentes: {os.listdir(auditoria)}"
         )
         raise FileNotFoundError(
-            f"Nenhum arquivo 'FECHAMENTO CENSO IP*.xls[mx]' encontrado em: {auditoria}"
+            f"Nenhum arquivo '{prefixo_up}*.xls[mx]' encontrado em: {auditoria}"
         )
     candidatos.sort(key=os.path.getmtime, reverse=True)
     escolhido = candidatos[0]
@@ -225,7 +226,7 @@ def _slug(nome: str) -> str:
 # Funcao principal
 # -----------------------------------------------------------------------------
 
-def _resolver_xlsm_em_bases(bases, nome_municipio: str) -> str:
+def _resolver_xlsm_em_bases(bases, nome_municipio: str, prefixo_arquivo: str) -> str:
     """
     Tenta cada base em ordem; retorna o caminho do primeiro .xlsm encontrado.
     Levanta FileNotFoundError com o resumo de todas as tentativas se nada bater.
@@ -234,7 +235,7 @@ def _resolver_xlsm_em_bases(bases, nome_municipio: str) -> str:
     for base in bases:
         try:
             folder = _find_municipio_folder(base, nome_municipio)
-            return _find_xlsm(folder)
+            return _find_xlsm(folder, prefixo_arquivo)
         except FileNotFoundError as e:
             erros.append(f"[{base}] {e}")
             continue
@@ -256,11 +257,12 @@ def carregar_levantamento(config, nome_municipio: str, bases=None):
     col_lat    = config.COLUNA_LAT
     col_lon    = config.COLUNA_LON
     colunas    = list(config.COLUNAS_LEVANTAMENTO)
+    prefixo    = config.LEVANTAMENTO_ARQUIVO_PREFIXO
 
     if not bases:
         bases = [config.LEVANTAMENTOS_BASE_PATH]
 
-    xlsm   = _resolver_xlsm_em_bases(bases, nome_municipio)
+    xlsm   = _resolver_xlsm_em_bases(bases, nome_municipio, prefixo)
     mtime  = os.path.getmtime(xlsm)
 
     slug       = _slug(nome_municipio)
