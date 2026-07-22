@@ -5,7 +5,7 @@ data/cache_transformadores/
 data/cache_areas_inacessiveis/
 data/*.err
 
-*.geojson
+# *.geojson
 *.qmd
 
 # Python
@@ -44,3 +44,6 @@ linkedin.md
 *.xlsm
 *.xls
 *.csv
+
+# Caminhos e nomes internos da empresa — nunca commitar (use .env.example como base)
+.env
