@@ -2,11 +2,14 @@
 # CONFIGURAÇÃO CENTRAL — edite este arquivo antes de rodar o servidor
 # =============================================================================
 
+import os
+
 # Caminho absoluto ou relativo à planilha (xlsx ou xlsm)
 # Exemplos:
-#   Windows:  r"C:\Users\Nicory\OneDrive\SATEL\mapa_municipios.xlsx"
+#   Windows:  r"C:\Users\Nicory\OneDrive\{USERNAME}\mapa_municipios.xlsx"
 #   Relativo: "../data/mapa_municipios.xlsx"
-PLANILHA_PATH = r"C:\Users\Satel\OneDrive - SATEL\Portal - Censo IP\Censo IP 2026.xlsm"
+USERNAME = os.environ.get("USERNAME") or os.environ.get("USER") or "Satel"
+PLANILHA_PATH = rf"C:\Users\{USERNAME}\OneDrive - SATEL\Portal - Censo IP\Censo IP 2026.xlsm"
 
 # Nome exato da aba que contém os dados
 PLANILHA_ABA = "tecnico"
@@ -54,9 +57,9 @@ LARGURA_BORDA = 0
 # Base path onde ficam as pastas dos municípios. Estrutura esperada:
 #   <BASE>/<NOME_MUNICIPIO>/AUDITORIA/FECHAMENTO CENSO IP*.xlsm
 # Comparação de nomes é case-insensitive em todas as etapas.
-LEVANTAMENTOS_BASE_PATH      = r"C:\Users\Satel\OneDrive - SATEL\Portal - Censo IP\2026\Municipios"
-LEVANTAMENTOS_BASE_PATH_2025 = r"C:\Users\Satel\OneDrive - SATEL\Portal - Censo IP\2025\Municipios"
-LEVANTAMENTOS_BASE_PATH_2024 = r"C:\Users\Satel\OneDrive - SATEL\Portal - Censo IP\2024\MUNICIPIOS"
+LEVANTAMENTOS_BASE_PATH      = rf"C:\Users\{USERNAME}\OneDrive - SATEL\Portal - Censo IP\2026\Municipios"
+LEVANTAMENTOS_BASE_PATH_2025 = rf"C:\Users\{USERNAME}\OneDrive - SATEL\Portal - Censo IP\2025\Municipios"
+LEVANTAMENTOS_BASE_PATH_2024 = rf"C:\Users\{USERNAME}\OneDrive - SATEL\Portal - Censo IP\2024\MUNICIPIOS"
     
 # Diretório onde os caches por município são gravados
 LEVANTAMENTOS_CACHE_DIR = "../data/cache_levantamentos"
@@ -97,7 +100,7 @@ COR_MEDICAO_NAO = "#1E3A8A"  # azul escuro
 #   <BASE>/<NOME_MUNICIPIO>/LOTES/*.kml
 # Nomes podem variar de caixa/acentos; o matching e feito normalizando
 # nomes para apenas alfanumericos em lowercase.
-TRANSFORMADORES_BASE_PATH = r"C:\Users\Satel\OneDrive - SATEL\Portal - Censo IP\2026\INTERNO_ANALISE"
+TRANSFORMADORES_BASE_PATH = rf"C:\Users\{USERNAME}\OneDrive - SATEL\Portal - Censo IP\2026\INTERNO_ANALISE"
 TRANSFORMADORES_LOTES_SUB = "LOTES"
 TRANSFORMADORES_CACHE_DIR = "../data/cache_transformadores"
 
@@ -107,6 +110,6 @@ TRANSFORMADORES_CACHE_DIR = "../data/cache_transformadores"
 # Estrutura esperada:
 #   <BASE>/<NOME_MUNICIPIO>/AREAS_INACESSIVEIS/*.gpkg
 # Mesma logica do transformadores, mas le .gpkg (GeoPackage) ao inves de .kml.
-AREAS_INACESSIVEIS_BASE_PATH = r"C:\Users\Satel\OneDrive - SATEL\Portal - Censo IP\2026\INTERNO_ANALISE"
+AREAS_INACESSIVEIS_BASE_PATH = rf"C:\Users\{USERNAME}\OneDrive - SATEL\Portal - Censo IP\2026\INTERNO_ANALISE"
 AREAS_INACESSIVEIS_SUB       = "AREAS_INACESSIVEIS"
 AREAS_INACESSIVEIS_CACHE_DIR = "../data/cache_areas_inacessiveis"
