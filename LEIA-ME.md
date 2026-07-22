@@ -74,10 +74,18 @@ O sistema lê a planilha e as pastas por município a partir de caminhos que **v
 ### Como configurar
 
 1. Copie o arquivo [`.env.example`](.env.example) (raiz do projeto) e renomeie a cópia para **`.env`**.
-2. Abra o `.env` num editor de texto e preencha cada caminho com o local real, no seu computador, da pasta sincronizada onde ficam a planilha principal e as pastas por município/ano. Exemplo do formato esperado:
+2. Abra o `.env` num editor de texto e preencha cada caminho.
+
+   ⚠️ **Importante:** não inclua `C:\Users\<seu usuário>` — o sistema detecta seu usuário do Windows automaticamente e monta essa parte sozinho. Coloque só o trecho que vem **depois** do usuário, começando com `\`. Assim o mesmo `.env` funciona em qualquer computador da equipe, sem precisar editar o caminho do usuário toda vez.
+
+   Exemplo — se o caminho real na sua máquina é:
    ```
-   PLANILHA_PATH=C:\Users\<seu usuário>\<sua pasta sincronizada>\<planilha>.xlsm
-   LEVANTAMENTOS_BASE_PATH=C:\Users\<seu usuário>\<sua pasta sincronizada>\2026\Municipios
+   C:\Users\joao\<sua pasta sincronizada>\<planilha>.xlsm
+   ```
+   o que vai no `.env` é:
+   ```
+   PLANILHA_PATH=\<sua pasta sincronizada>\<planilha>.xlsm
+   LEVANTAMENTOS_BASE_PATH=\<sua pasta sincronizada>\2026\Municipios
    ```
 3. Confirme que essa pasta está sincronizada no seu OneDrive/rede local antes de rodar o sistema — caso contrário, os arquivos não serão encontrados. Se precisar adicionar um atalho de uma pasta compartilhada ao seu OneDrive: clique com o botão direito na pasta de origem → **"Adicionar atalho ao OneDrive"** (ou **"Enviar a atalhos"**) → aguarde a sincronização terminar (ícone de nuvem para de girar).
 4. Peça o link da pasta compartilhada e os nomes/caminhos exatos a quem já roda o sistema, caso não os tenha.

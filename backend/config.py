@@ -9,15 +9,29 @@ from dotenv import load_dotenv
 
 load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env"))
 
+# Usuario do Windows logado — detectado automaticamente, nao vem do .env.
+# Os caminhos no .env contem so o trecho DEPOIS de "C:\Users\<usuario>\",
+# assim o mesmo .env funciona em qualquer PC, independente do nome de usuario.
+USERNAME = os.environ.get("USERNAME") or os.environ.get("USER")
+if not USERNAME:
+    raise RuntimeError("Nao foi possivel detectar o usuario do Windows (variavel USERNAME).")
+USER_HOME = rf"C:\Users\{USERNAME}"
 
-def _env_obrigatorio(nome):
-    valor = os.environ.get(nome)
-    if not valor:
+
+def _caminho_obrigatorio(nome):
+    sufixo = os.environ.get(nome)
+    if not sufixo:
         raise RuntimeError(
             f"Variavel de ambiente '{nome}' nao definida.\n"
-            f"Copie .env.example para .env na raiz do projeto e preencha os caminhos reais."
+            f"Copie .env.example para .env na raiz do projeto e preencha os caminhos "
+            rf"(apenas o trecho depois de C:\Users\{USERNAME}\, começando com \)."
         )
-    return valor
+    return USER_HOME + sufixo
+
+
+def _caminho_opcional(nome):
+    sufixo = os.environ.get(nome, "")
+    return USER_HOME + sufixo if sufixo else ""
 
 
 def _env_opcional(nome, padrao=""):
@@ -25,7 +39,7 @@ def _env_opcional(nome, padrao=""):
 
 
 # Caminho absoluto da planilha principal (xlsx ou xlsm) — definido em .env
-PLANILHA_PATH = _env_obrigatorio("PLANILHA_PATH")
+PLANILHA_PATH = _caminho_obrigatorio("PLANILHA_PATH")
 
 # Nome exato da aba que contém os dados
 PLANILHA_ABA = _env_opcional("PLANILHA_ABA", "tecnico")
@@ -76,9 +90,9 @@ LARGURA_BORDA = 0
 # LEVANTAMENTOS_BASE_PATH e a base do ano atual (obrigatoria). As demais
 # LEVANTAMENTOS_BASE_PATH_<ANO> (anos anteriores) sao opcionais — o server
 # descobre automaticamente todas as que existirem no .env.
-LEVANTAMENTOS_BASE_PATH      = _env_obrigatorio("LEVANTAMENTOS_BASE_PATH")
-LEVANTAMENTOS_BASE_PATH_2025 = _env_opcional("LEVANTAMENTOS_BASE_PATH_2025")
-LEVANTAMENTOS_BASE_PATH_2024 = _env_opcional("LEVANTAMENTOS_BASE_PATH_2024")
+LEVANTAMENTOS_BASE_PATH      = _caminho_obrigatorio("LEVANTAMENTOS_BASE_PATH")
+LEVANTAMENTOS_BASE_PATH_2025 = _caminho_opcional("LEVANTAMENTOS_BASE_PATH_2025")
+LEVANTAMENTOS_BASE_PATH_2024 = _caminho_opcional("LEVANTAMENTOS_BASE_PATH_2024")
 
 # Prefixo do nome do arquivo de levantamento dentro de AUDITORIA/
 LEVANTAMENTO_ARQUIVO_PREFIXO = _env_opcional("LEVANTAMENTO_ARQUIVO_PREFIXO", "FECHAMENTO")
@@ -122,7 +136,7 @@ COR_MEDICAO_NAO = "#1E3A8A"  # azul escuro
 #   <BASE>/<NOME_MUNICIPIO>/LOTES/*.kml
 # Nomes podem variar de caixa/acentos; o matching e feito normalizando
 # nomes para apenas alfanumericos em lowercase.
-TRANSFORMADORES_BASE_PATH = _env_opcional("TRANSFORMADORES_BASE_PATH")
+TRANSFORMADORES_BASE_PATH = _caminho_opcional("TRANSFORMADORES_BASE_PATH")
 TRANSFORMADORES_LOTES_SUB = "LOTES"
 TRANSFORMADORES_CACHE_DIR = "../data/cache_transformadores"
 
@@ -132,6 +146,6 @@ TRANSFORMADORES_CACHE_DIR = "../data/cache_transformadores"
 # Estrutura esperada:
 #   <BASE>/<NOME_MUNICIPIO>/AREAS_INACESSIVEIS/*.gpkg
 # Mesma logica do transformadores, mas le .gpkg (GeoPackage) ao inves de .kml.
-AREAS_INACESSIVEIS_BASE_PATH = _env_opcional("AREAS_INACESSIVEIS_BASE_PATH")
+AREAS_INACESSIVEIS_BASE_PATH = _caminho_opcional("AREAS_INACESSIVEIS_BASE_PATH")
 AREAS_INACESSIVEIS_SUB       = "AREAS_INACESSIVEIS"
 AREAS_INACESSIVEIS_CACHE_DIR = "../data/cache_areas_inacessiveis"
