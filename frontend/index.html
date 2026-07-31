@@ -140,38 +140,46 @@
       font-family: monospace;
     }
 
-    /* ── tombamento (filtro por TRANSFORMADOR no levantamento) ── */
-    .tombamento-wrap {
+    /* ── filtro geral de pontos (multi-coluna, no levantamento) ── */
+    .filtro-wrap {
       position: relative;
-      flex: 0 0 160px;
-    }
-
-    #tombamento {
-      width: 100%;
+      flex: 0 0 230px;
+      display: flex;
+      align-items: center;
       background: var(--surface2);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      color: var(--text);
-      font-size: 13px;
-      padding: 7px 12px 7px 32px;
-      outline: none;
       transition: border-color .2s, opacity .2s;
     }
 
-    #tombamento:focus {
+    .filtro-wrap:focus-within {
       border-color: var(--accent);
     }
 
-    #tombamento::placeholder {
+    .filtro-wrap.disabled {
+      opacity: .45;
+    }
+
+    #filtro-geral {
+      flex: 1;
+      min-width: 0;
+      background: transparent;
+      border: none;
+      color: var(--text);
+      font-size: 13px;
+      padding: 7px 6px 7px 32px;
+      outline: none;
+    }
+
+    #filtro-geral::placeholder {
       color: var(--muted);
     }
 
-    #tombamento:disabled {
-      opacity: .45;
+    #filtro-geral:disabled {
       cursor: not-allowed;
     }
 
-    .tombamento-icon {
+    .filtro-icon {
       position: absolute;
       left: 10px;
       top: 50%;
@@ -179,6 +187,157 @@
       color: var(--muted);
       pointer-events: none;
       font-size: 14px;
+    }
+
+    .filtro-chip {
+      display: none;
+      align-items: center;
+      gap: 4px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: .02em;
+      border-radius: 999px;
+      padding: 2px 6px 2px 8px;
+      margin-left: 4px;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    .filtro-chip.show {
+      display: inline-flex;
+    }
+
+    .filtro-count {
+      color: var(--muted);
+      font-size: 11px;
+      font-family: monospace;
+      padding-right: 10px;
+      white-space: nowrap;
+    }
+
+    .filtro-help {
+      color: var(--muted);
+      font-size: 12px;
+      cursor: pointer;
+      padding: 0 8px 0 2px;
+      user-select: none;
+    }
+
+    .filtro-help:hover {
+      color: var(--accent);
+    }
+
+    #filtro-sugestoes {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      right: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      z-index: 9999;
+      max-height: 320px;
+      overflow-y: auto;
+      display: none;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, .5);
+    }
+
+    .filtro-grupo-titulo {
+      padding: 6px 12px 3px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .04em;
+      color: var(--accent);
+      text-transform: uppercase;
+    }
+
+    .filtro-item {
+      padding: 6px 12px;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      transition: background .12s;
+    }
+
+    .filtro-item:hover {
+      background: var(--surface2);
+    }
+
+    .filtro-item .valor {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .filtro-item .qtd {
+      color: var(--muted);
+      font-size: 11px;
+      font-family: monospace;
+      flex-shrink: 0;
+    }
+
+    .filtro-rodape {
+      padding: 8px 12px;
+      font-size: 12px;
+      color: var(--accent);
+      cursor: pointer;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .filtro-rodape:hover {
+      background: var(--surface2);
+    }
+
+    .filtro-vazio {
+      padding: 12px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .filtro-help-popover {
+      position: absolute;
+      top: calc(100% + 4px);
+      right: 0;
+      width: 300px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      z-index: 9999;
+      padding: 12px 14px;
+      font-size: 12px;
+      color: var(--text);
+      display: none;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, .5);
+    }
+
+    .filtro-help-popover.show {
+      display: block;
+    }
+
+    .filtro-help-popover table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 6px;
+    }
+
+    .filtro-help-popover td {
+      padding: 3px 0;
+      vertical-align: top;
+    }
+
+    .filtro-help-popover td:first-child {
+      font-family: monospace;
+      color: var(--accent);
+      white-space: nowrap;
+      padding-right: 10px;
     }
 
     /* ── botão reload ── */
@@ -585,31 +744,31 @@
       filter: brightness(1.12);
     }
 
-    /* ── pontos do levantamento (apenas pontos sobrepostos usam DivIcon;
-       os singletons usam L.circleMarker no canvas para performance) ── */
-    .lev-marker {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      border: 1px solid #0a0d16;
-      box-sizing: border-box;
-      position: relative;
+    /* ── pontos do levantamento — todos em L.circleMarker no canvas
+       (singleton e stack), inclusive os empilhados: ver stackCanvasMarker.
+       Nenhum DOM por ponto (perf: dezenas de milhares de pontos por
+       município). ── */
+
+    /* Tooltip único compartilhado (substitui bindTooltip por marker —
+       27k+ objetos Tooltip individuais era um dos gargalos de performance
+       no pan/zoom). Mostrado/escondido via mouseover/mouseout delegado no
+       levantamentoLayer (L.featureGroup). */
+    .lev-tooltip {
+      position: absolute;
+      transform: translate(-50%, -100%);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 11px;
+      padding: 3px 7px;
+      border-radius: 4px;
+      pointer-events: none;
+      white-space: nowrap;
+      z-index: 500;
+      display: none;
     }
-    .lev-marker.stack {
-      width: 12px;
-      height: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #fff;
-      font-size: 14px;
-      font-weight: 700;
-      line-height: 1;
-      text-shadow: 0 0 2px rgba(0,0,0,.85);
-    }
-    .lev-marker.stack::before {
-      content: '*';
-      transform: translateY(2.5px);
+    .lev-tooltip.show {
+      display: block;
     }
 
     /* ── card de ponto no painel lateral ── */
@@ -955,9 +1114,14 @@
       <div id="busca-resultados"></div>
     </div>
 
-    <div class="tombamento-wrap" title="Disponível ao entrar no levantamento de um município">
-      <span class="tombamento-icon">⌗</span>
-      <input id="tombamento" type="text" placeholder="Tombamento" autocomplete="off" disabled>
+    <div class="filtro-wrap disabled" id="filtro-wrap" title="Disponível ao entrar no levantamento de um município">
+      <span class="filtro-icon">⌗</span>
+      <span id="filtro-chip" class="filtro-chip"></span>
+      <input id="filtro-geral" type="text" placeholder="Filtrar pontos…" autocomplete="off" disabled>
+      <span id="filtro-count" class="filtro-count"></span>
+      <span id="filtro-help-btn" class="filtro-help" title="Ajuda de sintaxe">?</span>
+      <div id="filtro-sugestoes"></div>
+      <div id="filtro-help-popover" class="filtro-help-popover"></div>
     </div>
 
     <button id="btn-maptype" title="Trocar tipo de mapa">
@@ -982,6 +1146,7 @@
       <button id="btn-transformadores" title="Mostrar/ocultar transformadores">★</button>
       <button id="btn-areas" title="Mostrar/ocultar áreas inacessíveis">⚠</button>
       <button id="btn-download" title="Exportar dados">⭳</button>
+      <div id="lev-tooltip" class="lev-tooltip"></div>
       <div id="map-loading" class="map-loading">
         <div class="loading-spinner"></div>
         <div class="loading-text" id="map-loading-text">Carregando…</div>
@@ -1049,6 +1214,232 @@
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script>
+    // ════════════════════════════════════════════════════════════
+    // PERF — instrumentação de performance do modo Levantamento.
+    // Só existe para diagnóstico manual no console; não altera nada
+    // na aplicação. Desligado por padrão (custo zero quando off).
+    //
+    // Ativar:  ?perf=1 na URL, ou no console: PERF.on()
+    // Desligar: PERF.off()
+    // Baseline (FPS ocioso, para comparar): PERF.baseline()
+    // ════════════════════════════════════════════════════════════
+    (function () {
+      "use strict";
+
+      function lerFlagInicial() {
+        try {
+          if (new URLSearchParams(location.search).get("perf") === "1") return true;
+        } catch (e) { /* ignora */ }
+        try {
+          if (localStorage.getItem("perf") === "1") return true;
+        } catch (e) { /* ignora (modo privado etc.) */ }
+        return false;
+      }
+
+      let enabled = false;
+      let patched = false;
+      let mapaAnexado = false;
+      const originais = {};   // chave -> { proto, nome, orig }
+      const buckets = {};     // chave -> { ms, n }
+
+      // Contexto (nome do município / total de pontos) para rotular os logs.
+      // Não dá pra ler via window.currentMunicipioNome / window.levantamentoPontos:
+      // são `let` no escopo do script da aplicação, não viram propriedade de
+      // window (diferente de `var`/function declarations). O app avisa via
+      // PERF.setContexto() sempre que esses valores mudam (ver desenharPontos
+      // e sairLevantamento em index.html).
+      let ctxNome = "?";
+      let ctxTotal = 0;
+
+      function novoBucket() { return { ms: 0, n: 0 }; }
+
+      function warn(...args) { console.warn("[PERF]", ...args); }
+
+      // Patch de protótipo, revertível. Se o método não existir (Leaflet mudou
+      // de versão), avisa e segue sem quebrar nada.
+      function wrap(proto, nome, chave) {
+        if (!proto) { warn(`prototype ausente para ${chave} — Leaflet ainda não carregado?`); return; }
+        const orig = proto[nome];
+        if (typeof orig !== "function") { warn(`${chave} (${nome}) ausente — pulei essa métrica`); return; }
+        originais[chave] = { proto, nome, orig };
+        buckets[chave] = novoBucket();
+        proto[nome] = function (...args) {
+          const t0 = performance.now();
+          const r = orig.apply(this, args);
+          buckets[chave].ms += performance.now() - t0;
+          buckets[chave].n += 1;
+          return r;
+        };
+      }
+
+      function aplicarPatches() {
+        if (patched || typeof L === "undefined") return;
+        wrap(L.Canvas && L.Canvas.prototype, "_redraw", "canvas._redraw");
+        wrap(L.Canvas && L.Canvas.prototype, "_handleMouseHover", "canvas._handleMouseHover (hit-test)");
+        wrap(L.Renderer && L.Renderer.prototype, "_update", "renderer._update (reprojeção)");
+        patched = true;
+      }
+
+      function removerPatches() {
+        if (!patched) return;
+        for (const chave in originais) {
+          const { proto, nome, orig } = originais[chave];
+          proto[nome] = orig;
+          delete originais[chave];
+        }
+        patched = false;
+      }
+
+      function resetBuckets() {
+        for (const k in buckets) buckets[k] = novoBucket();
+      }
+
+      // ── gesto (pan/zoom) medido via rAF entre start/end ──
+      let gesto = null; // { tipo, t0, frames:[], raf, longtasks:[], obs }
+
+      function iniciarGesto(tipo) {
+        if (!enabled || gesto) return;
+        resetBuckets();
+        gesto = { tipo, t0: performance.now(), frames: [], longtasks: [], raf: null, obs: null };
+        let last = gesto.t0;
+        (function tick() {
+          if (!gesto) return;
+          const now = performance.now();
+          gesto.frames.push(now - last);
+          last = now;
+          gesto.raf = requestAnimationFrame(tick);
+        })();
+        if (window.PerformanceObserver) {
+          try {
+            gesto.obs = new PerformanceObserver(list => {
+              for (const e of list.getEntries()) gesto.longtasks.push(e.duration);
+            });
+            gesto.obs.observe({ entryTypes: ["longtask"] });
+          } catch (e) { /* longtask não suportado neste browser */ }
+        }
+      }
+
+      function finalizarGesto(tipoEsperado) {
+        if (!enabled || !gesto || gesto.tipo !== tipoEsperado) return;
+        cancelAnimationFrame(gesto.raf);
+        if (gesto.obs) gesto.obs.disconnect();
+        const dur = performance.now() - gesto.t0;
+        const frames = gesto.frames;
+        const n = frames.length;
+        const fps = n > 1 ? 1000 / (frames.reduce((a, b) => a + b, 0) / n) : 0;
+        const pior = n ? Math.max(...frames) : 0;
+        const acima33 = frames.filter(f => f > 33).length;
+        const acima100 = frames.filter(f => f > 100).length;
+        const longtasks = gesto.longtasks;
+
+        const nomeMun = ctxNome;
+        const totalPontos = ctxTotal;
+
+        console.groupCollapsed(
+          `%c[PERF] ${gesto.tipo.toUpperCase()} — ${nomeMun} · ${totalPontos} pontos`,
+          "color:#7c6ff7;font-weight:bold"
+        );
+        console.log("duração        ", dur.toFixed(0), "ms");
+        console.log("FPS médio      ", fps.toFixed(1), `(${n} frames)`);
+        console.log("pior frame     ", pior.toFixed(0), "ms");
+        console.log("frames >33ms   ", `${acima33} / ${n}`);
+        console.log("frames >100ms  ", `${acima100} / ${n}`);
+        for (const chave in buckets) {
+          const b = buckets[chave];
+          console.log(
+            chave.padEnd(38),
+            b.ms.toFixed(0), "ms /", b.n, "calls",
+            b.n ? `(${(b.ms / b.n).toFixed(1)} ms/call)` : ""
+          );
+        }
+        if (longtasks.length) {
+          console.log("long tasks     ", longtasks.length, "· máx", Math.max(...longtasks).toFixed(0), "ms");
+        }
+        console.groupEnd();
+
+        gesto = null;
+      }
+
+      function baseline(segundos = 3) {
+        if (!enabled) { warn("ligue PERF.on() antes de rodar baseline()"); return; }
+        const frames = [];
+        let last = performance.now();
+        let raf;
+        (function tick() {
+          const now = performance.now();
+          frames.push(now - last);
+          last = now;
+          raf = requestAnimationFrame(tick);
+        })();
+        console.log(`[PERF] baseline: medindo FPS ocioso por ${segundos}s (não mexa no mapa)…`);
+        setTimeout(() => {
+          cancelAnimationFrame(raf);
+          const n = frames.length;
+          const fps = n > 1 ? 1000 / (frames.reduce((a, b) => a + b, 0) / n) : 0;
+          console.log(
+            `%c[PERF] baseline ocioso — FPS médio ${fps.toFixed(1)} (${n} frames em ${segundos}s)`,
+            "color:#7c6ff7;font-weight:bold"
+          );
+        }, segundos * 1000);
+      }
+
+      window.PERF = {
+        on() {
+          enabled = true;
+          aplicarPatches();
+          try { localStorage.setItem("perf", "1"); } catch (e) { /* ignora */ }
+          console.log("%c[PERF] ligado", "color:#7c6ff7;font-weight:bold");
+        },
+        off() {
+          enabled = false;
+          removerPatches();
+          try { localStorage.removeItem("perf"); } catch (e) { /* ignora */ }
+          console.log("[PERF] desligado");
+        },
+        baseline,
+        warn,
+        get enabled() { return enabled; },
+        // Chamado pelo app sempre que o município/total de pontos do
+        // levantamento muda (entrar, sair, trocar de município).
+        setContexto(nome, total) {
+          ctxNome = nome || "?";
+          ctxTotal = total || 0;
+        },
+        // Chamado uma vez pelo app, logo após criar o mapa.
+        attachMap(map) {
+          if (mapaAnexado) return;
+          mapaAnexado = true;
+          map.on("movestart", () => iniciarGesto("pan"));
+          map.on("moveend", () => finalizarGesto("pan"));
+          map.on("zoomstart", () => iniciarGesto("zoom"));
+          map.on("zoomend", () => finalizarGesto("zoom"));
+        },
+        // Chamado pelo app ao final de entrarLevantamento().
+        medirCarga(rotulo, splits, contagens) {
+          if (!enabled) return;
+          console.groupCollapsed(`%c[PERF] CARGA — ${rotulo}`, "color:#7c6ff7;font-weight:bold");
+          console.table(splits);
+          console.table(contagens);
+          console.groupEnd();
+        },
+        // Chamado pelo app ao final de atualizarPontosVisiveis() (filtro
+        // de dados e/ou culling por viewport no moveend/zoomend).
+        medirFiltro(ms, adicionados, removidos, criados) {
+          if (!enabled) return;
+          console.log(
+            `%c[PERF] atualizarPontosVisiveis()%c ${ms.toFixed(1)} ms · ` +
+            `+${adicionados}/-${removidos} layers · ${criados || 0} criados agora`,
+            "color:#7c6ff7", "color:inherit"
+          );
+        },
+      };
+
+      if (lerFlagInicial()) window.PERF.on();
+    })();
+  </script>
+
   <script>
     // ════════════════════════════════════════════════════════════
     // CONFIG
@@ -1071,14 +1462,18 @@
 
     // Estado do modo Levantamento
     let levantamentoMode       = false;
-    let levantamentoLayer      = null;   // L.layerGroup com markers
+    // L.featureGroup (não layerGroup) — precisa propagar eventos dos markers
+    // filhos pro grupo (e.layer) pra viabilizar o click/hover delegados em vez
+    // de um listener por marker (ver criarMarkerParaGrupo/atualizarPontosVisiveis).
+    let levantamentoLayer      = null;
     let levantamentoPontos     = [];     // pontos crus retornados pelo backend
-    let stackGroups            = null;   // Map<"lat,lng", [pontos]>
+    let stackGroups            = null;   // Map<"lat,lng", [pontos]> — todos os grupos, viewport ou não
     let currentLevantamentoKey = null;   // IBGE (string) ou nome da regional
     let currentMunicipioNome   = null;
     let spiderfied             = null;   // { markers: [], lines: [] }
     let savedCardHtml          = null;   // placeholder do card para restaurar ao sair
     let currentOutlineLayer    = null;   // outline do municipio focado durante o levantamento
+    let vizDebounceTimer       = null;   // debounce do moveend/zoomend -> atualizarPontosVisiveis
 
     // Transformadores (toggle independente dentro do modo levantamento)
     let transformadoresAtivos      = false;
@@ -1096,11 +1491,19 @@
     let dataMin = null;   // Date min
     let dataMax = null;   // Date max
     let dataAte = null;   // Date atual (limite superior)
-    let levantamentoMarkers = new Map();  // chaveCoord -> { layer, group }
+    // chaveCoord -> { layer, group } — só existe entrada pros grupos que já
+    // entraram no viewport ao menos uma vez (criação preguiçosa, ver
+    // criarMarkerParaGrupo). O marker nunca é recriado, só add/remove.
+    let levantamentoMarkers = new Map();
 
-    // Filtro por TRANSFORMADOR (Tombamento) no levantamento. Texto normalizado
-    // (uppercase/trim); vazio = sem filtro.
-    let filtroTombamento = "";
+    // Filtro geral de pontos no levantamento — busca em qualquer coluna de
+    // COLUNAS_LEVANTAMENTO, com curingas (*, ?), aspas para match exato e
+    // multi-token (AND, cada termo pode casar em qualquer coluna).
+    // Ver funções levIndexConstruir/levFiltroAplicar mais abaixo.
+    let filtroGeral = { texto: "", campo: null };  // campo != null = restrito a 1 coluna
+    let levIndex    = null;   // Array<Array<string>> — [ponto][coluna] já normalizado
+    let passMask    = null;   // Uint8Array — 1 se o ponto passa no filtro atual
+    let levIndexando = false; // true durante a indexação preguiçosa (fatiada)
 
     // Constantes de cor dos pontos (espelham backend/config.py)
     const COR_MEDICAO_SIM = "#7CFC00";
@@ -1129,6 +1532,7 @@
       attributionControl: false,
       maxZoom: 21,
     });
+    if (window.PERF) window.PERF.attachMap(map);
 
     // ──────────────────────────────────────────────
     // Tile layers gerenciaveis (troca dinamica preservando estado)
@@ -1882,29 +2286,60 @@
       const btn = document.getElementById("btn-levantamento");
       btn.classList.add("loading");
       mostrarLoading(`Carregando levantamento de ${currentMunicipioNome}…`);
+      // Nome disponível já aqui (mesmo antes de desenharPontos rotular o total)
+      // pra rotular corretamente os gestos de PAN/ZOOM do fly-to de carregamento.
+      if (window.PERF) window.PERF.setContexto(currentMunicipioNome, 0);
+      const perfOn = window.PERF && window.PERF.enabled;
+      const perfT0 = perfOn ? performance.now() : 0;
       try {
         const r = await fetch(`${API}/levantamento/${encodeURIComponent(key)}`);
         if (!r.ok) {
           const erro = await r.json().catch(() => ({ erro: r.statusText }));
           throw new Error(erro.erro || `HTTP ${r.status}`);
         }
+        const perfTFetch = perfOn ? performance.now() : 0;
         const json = await r.json();
-        bloquearMapa(layer);
-        desenharPontos(json.pontos || []);
+        const perfTParse = perfOn ? performance.now() : 0;
+        // Liga o modo levantamento ANTES do fly-to de bloquearMapa: o
+        // flyToBounds daquela função só termina de fato (moveend) alguns
+        // frames depois, de forma assíncrona — nesse meio tempo map.getBounds()
+        // ainda reflete a view anterior. atualizarPontosVisiveis() (chamada
+        // logo abaixo, dentro de desenharPontos) já faz um primeiro render
+        // "melhor esforço" com o viewport disponível nesse instante; o guard
+        // de levantamentoMode aqui garante que o moveend/zoomend real do
+        // fly-to (assim que a animação assentar) dispara a correção via
+        // onMapaMoveOuZoomEnd — sem isso o guard bloquearia essa correção.
         levantamentoMode = true;
+        bloquearMapa(layer);
+        const perfCarga = desenharPontos(json.pontos || []);
+        if (perfOn) {
+          requestAnimationFrame(() => {
+            const perfTFrame = performance.now();
+            window.PERF.medirCarga(currentMunicipioNome, {
+              fetch:            (perfTFetch - perfT0).toFixed(1) + " ms",
+              "parse json":     (perfTParse - perfTFetch).toFixed(1) + " ms",
+              agrupamento:      perfCarga.tAgrupar.toFixed(1) + " ms",
+              "renderização (viewport inicial)": perfCarga.tRender.toFixed(1) + " ms",
+              "1º frame após render": (perfTFrame - perfTParse).toFixed(1) + " ms",
+            }, {
+              pontos:      json.pontos ? json.pontos.length : 0,
+              grupos:      perfCarga.grupos,
+              singletons:  perfCarga.singletons,
+              stacks:      perfCarga.stacks,
+              "layers criados (viewport inicial)": levantamentoMarkers.size,
+            });
+          });
+        }
         btn.classList.add("ativo");
         // habilita FABs do modo levantamento
         document.getElementById("btn-transformadores").classList.add("show");
         document.getElementById("btn-areas").classList.add("show");
         document.getElementById("btn-download").classList.add("show");
-        // habilita o filtro de tombamento (so faz sentido dentro do levantamento)
-        filtroTombamento = "";
-        const inpTomb = document.getElementById("tombamento");
-        inpTomb.value = "";
-        inpTomb.disabled = false;
-        inpTomb.title = "Filtra os pontos pelo campo TRANSFORMADOR";
+        // habilita o filtro geral (so faz sentido dentro do levantamento)
+        resetFiltroGeral(true);
         configurarRangeData(json.pontos || []);
       } catch (e) {
+        levantamentoMode = false;  // desfaz o "entrou" parcial em caso de erro
         console.error("Erro ao carregar levantamento:", e);
         alert("Erro ao carregar levantamento: " + e.message);
       } finally {
@@ -1962,7 +2397,6 @@
     }
 
     const POINT_RADIUS  = 4;   // raio dos pontos singletons (canvas)
-    const STACK_ICONSIZE = 12; // diâmetro do ícone de stack (DivIcon)
 
     function makeSingletonMarker(latlng, p) {
       const cor = corDoPonto(p);
@@ -1978,55 +2412,154 @@
 
     function makeStackMarker(latlng, p) {
       const cor = corDoPonto(p);
-      const icon = L.divIcon({
-        className: "",
-        html: `<div class="lev-marker stack" style="background:${cor}"></div>`,
-        iconSize:   [STACK_ICONSIZE, STACK_ICONSIZE],
-        iconAnchor: [STACK_ICONSIZE / 2, STACK_ICONSIZE / 2],
+      return stackCanvasMarker(latlng, {
+        radius:      POINT_RADIUS + 2,  // um pouco maior que o singleton, se diferencia
+        fillColor:   cor,
+        fillOpacity: 1,
+        color:       "#0a0d16",
+        weight:      1,
+        renderer:    canvasRenderer,
       });
-      return L.marker(latlng, { icon });
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // Click e hover delegados — um handler só no levantamentoLayer (precisa
+    // ser L.featureGroup pra propagar e.layer/e.target) em vez de um listener
+    // por marker. Markers de spiderfy não têm _grupo (ver spiderfy()), então
+    // caem no "return" abaixo e continuam com seu próprio handler individual
+    // (poucos por vez, não é um problema de performance).
+    // ─────────────────────────────────────────────────────────────────────────
+    function onLevantamentoLayerClick(e) {
+      const marker = e.layer;
+      const grupo = marker && marker._grupo;
+      if (!grupo) return;
+      L.DomEvent.stopPropagation(e);
+      if (grupo.length > 1) {
+        const visiveis = grupo.filter(pontoVisivel);
+        if (visiveis.length === 1) {
+          mostrarPontoNoPainel(visiveis[0]);
+        } else if (visiveis.length > 1) {
+          spiderfy(marker.getLatLng(), visiveis);
+        }
+      } else {
+        const rep = grupo[0];
+        if (pontoVisivel(rep)) mostrarPontoNoPainel(rep);
+      }
+    }
+
+    // Tooltip único compartilhado (substitui bindTooltip por marker — ver
+    // .lev-tooltip no CSS e TODO(perf) acima de desenharPontos).
+    function mostrarTooltipCompartilhado(marker, rep) {
+      const el = document.getElementById("lev-tooltip");
+      const pt = map.latLngToContainerPoint(marker.getLatLng());
+      el.textContent = rep.ID_PONTO || "";
+      el.style.left = pt.x + "px";
+      el.style.top  = (pt.y - 10) + "px";
+      el.classList.add("show");
+    }
+    function esconderTooltipCompartilhado() {
+      document.getElementById("lev-tooltip").classList.remove("show");
+    }
+    function onLevantamentoLayerMouseover(e) {
+      const marker = e.layer;
+      if (!marker || !marker._grupo) return;
+      mostrarTooltipCompartilhado(marker, marker._grupo[0]);
+    }
+    function onLevantamentoLayerMouseout(e) {
+      const marker = e.layer;
+      if (!marker || !marker._grupo) return;
+      esconderTooltipCompartilhado();
+    }
+
+    // Cria (uma única vez) o marker de um grupo e guarda em levantamentoMarkers.
+    // Nunca é chamada de novo pro mesmo grupo — atualizarPontosVisiveis só
+    // adiciona/remove a instância já criada.
+    function criarMarkerParaGrupo(k, grupo) {
+      const rep = grupo[0];
+      const ll  = L.latLng(rep.lat, rep.lng);
+      const marker = grupo.length > 1
+        ? makeStackMarker(ll, rep)
+        : makeSingletonMarker(ll, rep);
+      marker._grupo = grupo;
+      const info = { layer: marker, group: grupo };
+      levantamentoMarkers.set(k, info);
+      return info;
+    }
+
+    // TODO(perf): municípios grandes (ex.: Juazeiro do Norte, 27k pontos;
+    // Aquiraz, 24,6k) travavam o pan/zoom — confirmado com números reais via
+    // ?perf=1 (Aquiraz: FPS 6-18, frames de até 407ms, 2-12 long tasks por
+    // gesto). Diagnóstico + correção aplicados nesta rodada:
+    //   1. Hit-test global do canvas — CORRIGIDO indiretamente pelo #4 (menos
+    //      layers vivos fora do viewport = menos trabalho de hit-test).
+    //   2. bindTooltip por marker (27k objetos Tooltip) — CORRIGIDO: tooltip
+    //      único compartilhado (mostrarTooltipCompartilhado, acima).
+    //   3. canvasRenderer compartilhado com os 184 polígonos — DESCARTADO:
+    //      bloquearMapa() remove geojsonLayer/regionaisLayer do mapa ao entrar
+    //      no levantamento, só sobra 1 outline interactive:false. Não é fator.
+    //   4. Nenhum culling por viewport — CORRIGIDO: atualizarPontosVisiveis()
+    //      (abaixo) só mantém no mapa os grupos dentro de map.getBounds(),
+    //      chamada com debounce em moveend/zoomend.
+    //   5. makeStackMarker usava L.marker + DivIcon (DOM) — CORRIGIDO: migrado
+    //      pro canvas (stackCanvasMarker, ver bloco acima de makeStackMarker).
+    //   6. Payload de 19-20 MB sem gzip / sem cache em memória no backend —
+    //      PENDENTE, fora de escopo desta rodada (decisão do usuário).
+    //   7. Uma closure de click por marker — CORRIGIDO: handler delegado
+    //      (onLevantamentoLayerClick, acima) via L.featureGroup.
+    // Nota: as métricas internas do Leaflet (canvas._redraw/_handleMouseHover/
+    // renderer._update) vieram sempre "0 ms / 0 calls" nos testes reais —
+    // inconclusivas (possível método reatribuído como propriedade de instância
+    // pelo Leaflet, sombreando o patch no protótipo). Não impede o diagnóstico:
+    // os números de FPS/pior-frame/long-tasks já eram suficientes.
     function desenharPontos(pontos) {
+      const perfOn = window.PERF && window.PERF.enabled;
+      const t0 = perfOn ? performance.now() : 0;
+
       levantamentoPontos = pontos;
-      levantamentoLayer = L.layerGroup().addTo(map);
+      if (window.PERF) window.PERF.setContexto(currentMunicipioNome, pontos.length);
+
+      // featureGroup (não layerGroup): propaga eventos dos markers filhos
+      // (e.layer) pro grupo, viabilizando o click/hover delegados acima.
+      levantamentoLayer = L.featureGroup().addTo(map);
+      levantamentoLayer.on("click", onLevantamentoLayerClick);
+      levantamentoLayer.on("mouseover", onLevantamentoLayerMouseover);
+      levantamentoLayer.on("mouseout", onLevantamentoLayerMouseout);
+
       stackGroups = new Map();
       levantamentoMarkers = new Map();
 
-      // Agrupa por coordenada exata
-      for (const p of pontos) {
+      // Agrupa por coordenada exata. __idx espelha a posição em `pontos` —
+      // usado pelo índice do filtro geral (levIndex/passMask) para achar a
+      // linha de cada ponto sem precisar re-normalizar strings a cada busca.
+      for (let i = 0; i < pontos.length; i++) {
+        const p = pontos[i];
+        p.__idx = i;
         const k = chaveCoord(p.lat, p.lng);
         if (!stackGroups.has(k)) stackGroups.set(k, []);
         stackGroups.get(k).push(p);
       }
+      const tAgrupar = perfOn ? performance.now() : 0;
 
-      // Renderiza um marker por grupo (representante)
-      for (const [k, grupo] of stackGroups) {
-        const rep = grupo[0];
-        const ll  = L.latLng(rep.lat, rep.lng);
-        const marker = grupo.length > 1
-          ? makeStackMarker(ll, rep)
-          : makeSingletonMarker(ll, rep);
-        marker.bindTooltip(rep.ID_PONTO || "", { direction: "top", offset: [0, -6] });
-        if (grupo.length > 1) {
-          marker.on("click", (e) => {
-            L.DomEvent.stopPropagation(e);
-            const visiveis = grupo.filter(pontoVisivel);
-            if (visiveis.length === 1) {
-              mostrarPontoNoPainel(visiveis[0]);
-            } else if (visiveis.length > 1) {
-              spiderfy(ll, visiveis);
-            }
-          });
-        } else {
-          marker.on("click", (e) => {
-            L.DomEvent.stopPropagation(e);
-            if (pontoVisivel(rep)) mostrarPontoNoPainel(rep);
-          });
-        }
-        marker.addTo(levantamentoLayer);
-        levantamentoMarkers.set(k, { layer: marker, group: grupo });
+      // Renderização inicial: cria/adiciona só os grupos dentro do viewport
+      // atual (ver atualizarPontosVisiveis). Se o município inteiro cabe na
+      // tela (flyToBounds sem maxZoom em bloquearMapa), isso ainda cria um
+      // marker por grupo — o ganho aqui não é a contagem, é o custo por
+      // marker (sem tooltip, sem closure própria).
+      atualizarPontosVisiveis();
+      const tRender = perfOn ? performance.now() : 0;
+
+      if (!perfOn) return;
+      let singletons = 0, stacks = 0;
+      for (const grupo of stackGroups.values()) {
+        if (grupo.length > 1) stacks++; else singletons++;
       }
+      return {
+        tAgrupar: tAgrupar - t0,
+        tRender:  tRender - tAgrupar,
+        grupos:      stackGroups.size,
+        singletons,
+        stacks,
+      };
     }
 
     function spiderfy(centerLatLng, pontos) {
@@ -2094,6 +2627,37 @@
 
     function triangleMarker(latlng, opts) {
       return new TriangleMarker(latlng, opts);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Stack marker via canvas — pontos empilhados (mesma coordenada exata)
+    // antes usavam L.marker + DivIcon (nó DOM real). Em municípios grandes
+    // isso ainda soma centenas de nós DOM sofrendo reflow a cada pan/zoom.
+    // Desenha um círculo (igual ao singleton) com um ponto branco no centro
+    // pra diferenciar visualmente, tudo no mesmo canvasRenderer.
+    // ─────────────────────────────────────────────────────────────────────────
+    L.Canvas.include({
+      _updateStackDot(layer) {
+        if (!this._drawing || layer._empty()) return;
+        const p = layer._point;
+        const r = Math.max(Math.round(layer._radius), 1);
+        const ctx = this._ctx;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+        this._fillStroke(ctx, layer);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, Math.max(r * 0.4, 1), 0, Math.PI * 2);
+        ctx.fillStyle = "#ffffff";
+        ctx.fill();
+      }
+    });
+
+    const StackMarker = L.CircleMarker.extend({
+      _updatePath() { this._renderer._updateStackDot(this); }
+    });
+
+    function stackCanvasMarker(latlng, opts) {
+      return new StackMarker(latlng, opts);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -2350,35 +2914,70 @@
       return startOfDay(d).getTime() <= startOfDay(dataAte).getTime();
     }
 
-    function pontoDentroDoFiltroTombamento(p) {
-      if (!filtroTombamento) return true;
-      return String(p.TRANSFORMADOR || "").toUpperCase().includes(filtroTombamento);
+    function pontoDentroDoFiltroGeral(p) {
+      if (!passMask) return true;
+      return passMask[p.__idx] === 1;
     }
 
     // Predicado combinado: um ponto so e exibido se passa por todos os filtros
-    // ativos do modo levantamento (data + tombamento).
+    // ativos do modo levantamento (data + filtro geral).
     function pontoVisivel(p) {
-      return pontoDentroDoFiltroData(p) && pontoDentroDoFiltroTombamento(p);
+      return pontoDentroDoFiltroData(p) && pontoDentroDoFiltroGeral(p);
     }
 
-    function aplicarFiltros() {
-      if (!levantamentoLayer) return;
+    // Decide, pra cada grupo de coordenada, se ele deve estar no mapa —
+    // por DOIS critérios independentes:
+    //   1. pontoVisivel (filtro de data + filtro geral) — sobre os DADOS,
+    //      nunca depende do viewport (senão contador/export/dropdown de
+    //      sugestões ficariam errados quando o usuário não vê o município
+    //      inteiro).
+    //   2. estar dentro de map.getBounds() (+ padding) — culling por
+    //      viewport, só decide o que de fato vira layer no mapa.
+    // Markers são criados uma única vez (na primeira vez que o grupo entra
+    // no viewport) e reaproveitados depois — nunca recriados, só add/remove.
+    // Chamada tanto pelos filtros (data/geral) quanto pelo moveend/zoomend
+    // debounced (ver listeners mais abaixo).
+    function atualizarPontosVisiveis() {
+      if (!levantamentoLayer || !stackGroups) return;
       unspiderfy();
-      // Para cada grupo de coordenada, exibe apenas se algum ponto passa o filtro.
-      // Reusa stackGroups + levantamentoMarkers.
-      for (const [k, info] of levantamentoMarkers) {
-        const grupo = info.group;
-        const visiveis = grupo.filter(pontoVisivel);
-        if (visiveis.length === 0) {
-          if (info.layer && levantamentoLayer.hasLayer(info.layer)) {
-            levantamentoLayer.removeLayer(info.layer);
-          }
-        } else {
-          if (info.layer && !levantamentoLayer.hasLayer(info.layer)) {
-            info.layer.addTo(levantamentoLayer);
-          }
+      const perfOn = window.PERF && window.PERF.enabled;
+      const t0 = perfOn ? performance.now() : 0;
+      let adicionados = 0, removidos = 0, criados = 0;
+
+      const bounds = map.getBounds().pad(0.2);
+
+      for (const [k, grupo] of stackGroups) {
+        const rep = grupo[0];
+        const noViewport = bounds.contains([rep.lat, rep.lng]);
+        const passaFiltro = grupo.some(pontoVisivel);
+        const deveEstarNoMapa = noViewport && passaFiltro;
+
+        let info = levantamentoMarkers.get(k);
+        if (!info) {
+          if (!deveEstarNoMapa) continue;  // nunca criado e nao precisa agora
+          info = criarMarkerParaGrupo(k, grupo);
+          criados++;
+        }
+
+        const estaNoMapa = levantamentoLayer.hasLayer(info.layer);
+        if (deveEstarNoMapa && !estaNoMapa) {
+          info.layer.addTo(levantamentoLayer);
+          adicionados++;
+        } else if (!deveEstarNoMapa && estaNoMapa) {
+          levantamentoLayer.removeLayer(info.layer);
+          removidos++;
         }
       }
+      if (perfOn) window.PERF.medirFiltro(performance.now() - t0, adicionados, removidos, criados);
+    }
+
+    // Debounce do moveend/zoomend — recalcula o culling por viewport. Só faz
+    // sentido dentro do modo levantamento (guard), o mesmo mapa é reusado
+    // pra visualização normal dos municípios.
+    function onMapaMoveOuZoomEnd() {
+      if (!levantamentoMode) return;
+      clearTimeout(vizDebounceTimer);
+      vizDebounceTimer = setTimeout(atualizarPontosVisiveis, 150);
     }
 
     function onDataRangeInput() {
@@ -2386,13 +2985,311 @@
       const dias = parseInt(document.getElementById("data-range").value, 10) || 0;
       dataAte = new Date(dataMin.getTime() + dias * 86400000);
       document.getElementById("data-range-cur").textContent = fmtData(dataAte);
-      aplicarFiltros();
+      atualizarPontosVisiveis();
     }
 
-    function onTombamentoInput() {
-      filtroTombamento = String(document.getElementById("tombamento").value || "")
-        .trim().toUpperCase();
-      aplicarFiltros();
+    // ─────────────────────────────────────────────────────────────────────────
+    // Filtro geral de pontos — busca em qualquer coluna de COLUNAS_LEVANTAMENTO.
+    //
+    // Sintaxe:
+    //   667          contém "667" (padrão)
+    //   667*         começa com "667"
+    //   *667         termina com "667"
+    //   *667*        contém "667" (equivalente ao padrão)
+    //   TMQ?17       "?" = 1 caractere qualquer
+    //   "667"        igual exato
+    //   LD 50        AND — cada termo deve casar em ALGUMA coluna (não precisam
+    //                ser colunas diferentes)
+    //   POTENCIA:150 restringe a busca à coluna POTENCIA
+    //
+    // Para não custar 27k×15 normalize() por tecla, o texto de cada ponto é
+    // normalizado uma vez (levIndex, indexação preguiçosa fatiada) e cada tecla
+    // só faz comparações sobre esse índice já pronto.
+    // ─────────────────────────────────────────────────────────────────────────
+    const LEV_COL_IDX = {};
+    COLUNAS_LEVANTAMENTO.forEach((c, i) => { LEV_COL_IDX[c] = i; });
+
+    function escapeRegExpFiltro(s) {
+      return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    }
+
+    // Traduz um token (já normalizado) em RegExp, conforme a sintaxe acima.
+    function compilarPadraoFiltro(token) {
+      if (token.length >= 2 && token.startsWith('"') && token.endsWith('"')) {
+        return new RegExp("^" + escapeRegExpFiltro(token.slice(1, -1)) + "$");
+      }
+      const curingaIni = token.startsWith("*");
+      const curingaFim = token.endsWith("*");
+      let core = token;
+      if (curingaIni) core = core.slice(1);
+      if (curingaFim && core.length) core = core.slice(0, -1);
+      let pat = "";
+      for (const ch of core) {
+        if (ch === "*") pat += ".*";
+        else if (ch === "?") pat += ".";
+        else pat += escapeRegExpFiltro(ch);
+      }
+      const inicio = (curingaFim && !curingaIni) ? "^" : "";
+      const fim    = (curingaIni && !curingaFim) ? "$" : "";
+      return new RegExp(inicio + pat + fim);
+    }
+
+    // Extrai o prefixo "COLUNA:" (se houver e for uma coluna válida) e tokeniza
+    // o resto respeitando aspas ("a b" = 1 token). Cada token vira uma RegExp.
+    function parseFiltroGeral(textoBruto) {
+      let texto = String(textoBruto || "").trim();
+      let campo = null;
+      const m = texto.match(/^([A-Za-z_]+)\s*:\s*(.*)$/);
+      if (m) {
+        const candidato = COLUNAS_LEVANTAMENTO.find(c => c.toUpperCase() === m[1].toUpperCase());
+        if (candidato) {
+          campo = candidato;
+          texto = m[2];
+        }
+      }
+      const tokensBrutos = texto.match(/"[^"]*"|\S+/g) || [];
+      const tokens = tokensBrutos.map(t => compilarPadraoFiltro(normalizar(t)));
+      return { campo, tokens };
+    }
+
+    // Constrói levIndex[i][coluna] = valor normalizado, em fatias de 2000
+    // pontos via setTimeout para não travar a UI. Roda uma vez por município
+    // (liberado em sairLevantamento). Ao terminar, reexecuta o filtro pendente.
+    function iniciarIndexacaoFiltro() {
+      if (levIndex || levIndexando) return;
+      levIndexando = true;
+      const pontos = levantamentoPontos;
+      const n = pontos.length;
+      const idx = new Array(n);
+      const inp = document.getElementById("filtro-geral");
+      const placeholderOriginal = inp.placeholder;
+      inp.placeholder = "Indexando…";
+      let i = 0;
+      function passo() {
+        const fim = Math.min(i + 2000, n);
+        for (; i < fim; i++) {
+          const p = pontos[i];
+          const linha = new Array(COLUNAS_LEVANTAMENTO.length);
+          for (let c = 0; c < COLUNAS_LEVANTAMENTO.length; c++) {
+            linha[c] = normalizar(String(p[COLUNAS_LEVANTAMENTO[c]] || ""));
+          }
+          idx[i] = linha;
+        }
+        if (i < n) {
+          setTimeout(passo, 0);
+        } else {
+          levIndex = idx;
+          levIndexando = false;
+          inp.placeholder = placeholderOriginal;
+          levFiltroExecutar();
+        }
+      }
+      passo();
+    }
+
+    function atualizarChipFiltro() {
+      const chip = document.getElementById("filtro-chip");
+      if (filtroGeral.campo) {
+        chip.textContent = filtroGeral.campo + " ✕";
+        chip.classList.add("show");
+      } else {
+        chip.textContent = "";
+        chip.classList.remove("show");
+      }
+    }
+
+    function atualizarContadorFiltro() {
+      const el = document.getElementById("filtro-count");
+      if (!levantamentoMode) { el.textContent = ""; return; }
+      const total = levantamentoPontos.length;
+      if (!passMask) { el.textContent = `${total} / ${total}`; return; }
+      let n = 0;
+      for (let i = 0; i < passMask.length; i++) if (passMask[i]) n++;
+      el.textContent = `${n} / ${total}`;
+    }
+
+    function fecharSugestoesFiltro() {
+      const box = document.getElementById("filtro-sugestoes");
+      box.style.display = "none";
+      box.innerHTML = "";
+    }
+
+    function quoteTokenFiltro(valor) {
+      const s = String(valor).replace(/"/g, "");
+      return `"${s}"`;
+    }
+
+    // Sugestões agrupadas por coluna, ordenadas por nº de casamentos — só faz
+    // sentido quando não há coluna já restrita (senão a ambiguidade já foi
+    // resolvida). Alimentado pelos acúmulos feitos durante levFiltroExecutar.
+    function renderSugestoesFiltro(sugestoesPorColuna, totalMatch) {
+      const box = document.getElementById("filtro-sugestoes");
+      if (!sugestoesPorColuna || sugestoesPorColuna.size === 0) {
+        fecharSugestoesFiltro();
+        return;
+      }
+      const grupos = [...sugestoesPorColuna.entries()]
+        .sort((a, b) => b[1].count - a[1].count)
+        .slice(0, 6);
+
+      const html = grupos.map(([coluna, info]) => {
+        const itens = info.amostras.map(v => `
+          <div class="filtro-item" data-campo="${escapeHtml(coluna)}" data-valor="${escapeHtml(String(v))}">
+            <span class="valor">${escapeHtml(String(v))}</span>
+            <span class="qtd">${info.count} pts</span>
+          </div>`).join("");
+        return `<div class="filtro-grupo-titulo">${escapeHtml(coluna)}</div>${itens}`;
+      }).join("");
+
+      box.innerHTML = html + `
+        <div class="filtro-rodape" id="filtro-aplicar-todas">
+          <span>↵ aplicar em todas</span><span>${totalMatch} pts</span>
+        </div>`;
+      box.style.display = "block";
+
+      box.querySelectorAll(".filtro-item").forEach(el => {
+        el.addEventListener("click", () => {
+          const campo = el.dataset.campo;
+          const valor = el.dataset.valor;
+          const inp = document.getElementById("filtro-geral");
+          inp.value = `${campo}:${quoteTokenFiltro(valor)}`;
+          fecharSugestoesFiltro();
+          levFiltroExecutar();
+          inp.focus();
+        });
+      });
+      const rodape = document.getElementById("filtro-aplicar-todas");
+      if (rodape) rodape.addEventListener("click", () => fecharSugestoesFiltro());
+    }
+
+    // Uma única varredura do índice dá o passMask (visibilidade) E as
+    // sugestões do dropdown (agrupadas por coluna) para o último token digitado.
+    function levFiltroExecutar() {
+      const inp = document.getElementById("filtro-geral");
+      const bruto = inp.value || "";
+      filtroGeral.texto = bruto.trim();
+
+      if (!filtroGeral.texto) {
+        passMask = null;
+        filtroGeral.campo = null;
+        atualizarChipFiltro();
+        fecharSugestoesFiltro();
+        atualizarContadorFiltro();
+        atualizarPontosVisiveis();
+        return;
+      }
+
+      if (!levIndex) {
+        iniciarIndexacaoFiltro();  // reexecuta sozinho quando terminar
+        return;
+      }
+
+      const { campo, tokens } = parseFiltroGeral(filtroGeral.texto);
+      filtroGeral.campo = campo;
+      atualizarChipFiltro();
+
+      const colunas = campo ? [campo] : COLUNAS_LEVANTAMENTO;
+      const colIdxs = colunas.map(c => LEV_COL_IDX[c]);
+      const ultimoTokenIdx = tokens.length - 1;
+      const acumularSugestoes = !campo && tokens.length > 0;
+      const sugestoesPorColuna = new Map();  // coluna -> { count, amostras:[] }
+
+      const n = levIndex.length;
+      const mask = new Uint8Array(n);
+      let totalPass = 0;
+
+      for (let i = 0; i < n; i++) {
+        const linha = levIndex[i];
+        let passaTodos = tokens.length > 0;
+        for (let t = 0; t < tokens.length; t++) {
+          const regex = tokens[t];
+          let casouAlguma = false;
+          for (const ci of colIdxs) {
+            if (regex.test(linha[ci])) {
+              casouAlguma = true;
+              if (acumularSugestoes && t === ultimoTokenIdx) {
+                const nomeCol = COLUNAS_LEVANTAMENTO[ci];
+                let info = sugestoesPorColuna.get(nomeCol);
+                if (!info) { info = { count: 0, amostras: [] }; sugestoesPorColuna.set(nomeCol, info); }
+                info.count++;
+                if (info.amostras.length < 3) {
+                  const valor = levantamentoPontos[i][nomeCol];
+                  if (valor !== "" && !info.amostras.includes(valor)) info.amostras.push(valor);
+                }
+              }
+            }
+          }
+          if (!casouAlguma) { passaTodos = false; break; }
+        }
+        if (passaTodos) { mask[i] = 1; totalPass++; }
+      }
+
+      passMask = mask;
+      atualizarPontosVisiveis();
+      atualizarContadorFiltro();
+      if (campo) {
+        fecharSugestoesFiltro();
+      } else {
+        renderSugestoesFiltro(sugestoesPorColuna, totalPass);
+      }
+    }
+
+    let filtroDebounceTimer = null;
+    function onFiltroGeralInput() {
+      clearTimeout(filtroDebounceTimer);
+      filtroDebounceTimer = setTimeout(levFiltroExecutar, 150);
+    }
+
+    // Habilita/reseta o filtro geral — chamado ao entrar/sair do levantamento
+    // e ao trocar de município (cada município precisa reindexar).
+    function resetFiltroGeral(habilitar) {
+      clearTimeout(filtroDebounceTimer);
+      filtroGeral = { texto: "", campo: null };
+      levIndex = null;
+      levIndexando = false;
+      passMask = null;
+
+      const wrap = document.getElementById("filtro-wrap");
+      const inp = document.getElementById("filtro-geral");
+      inp.value = "";
+      inp.placeholder = "Filtrar pontos…";
+      atualizarChipFiltro();
+      fecharSugestoesFiltro();
+      fecharAjudaFiltro();
+
+      if (habilitar) {
+        wrap.classList.remove("disabled");
+        inp.disabled = false;
+        wrap.title = "Filtro geral — veja a ajuda (?)";
+        atualizarContadorFiltro();
+      } else {
+        wrap.classList.add("disabled");
+        inp.disabled = true;
+        wrap.title = "Disponível ao entrar no levantamento de um município";
+        document.getElementById("filtro-count").textContent = "";
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Ajuda de sintaxe (popover do "?")
+    // ─────────────────────────────────────────────────────────────────────────
+    function abrirAjudaFiltro() {
+      const pop = document.getElementById("filtro-help-popover");
+      pop.innerHTML = `
+        <strong>Filtro geral de pontos</strong>
+        <table>
+          <tr><td>667</td><td>contém "667" (padrão)</td></tr>
+          <tr><td>667*</td><td>começa com "667"</td></tr>
+          <tr><td>*667</td><td>termina com "667"</td></tr>
+          <tr><td>TMQ?17</td><td>"?" = 1 caractere qualquer</td></tr>
+          <tr><td>"667"</td><td>igual exato</td></tr>
+          <tr><td>LD 50</td><td>"E" — cada termo em alguma coluna</td></tr>
+          <tr><td>POTENCIA:150</td><td>restringe a 1 coluna</td></tr>
+        </table>`;
+      pop.classList.add("show");
+    }
+    function fecharAjudaFiltro() {
+      document.getElementById("filtro-help-popover").classList.remove("show");
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -2616,6 +3513,9 @@
 
     function sairLevantamento() {
       unspiderfy();
+      esconderTooltipCompartilhado();
+      clearTimeout(vizDebounceTimer);
+      if (window.PERF) window.PERF.setContexto(null, 0);
       if (levantamentoLayer) {
         map.removeLayer(levantamentoLayer);
         levantamentoLayer = null;
@@ -2639,12 +3539,8 @@
       document.getElementById("data-range-wrap").classList.remove("show");
       dataMin = dataMax = dataAte = null;
 
-      // reseta e desabilita o filtro de tombamento ao sair do levantamento
-      filtroTombamento = "";
-      const inpTomb = document.getElementById("tombamento");
-      inpTomb.value = "";
-      inpTomb.disabled = true;
-      inpTomb.title = "Disponível ao entrar no levantamento de um município";
+      // reseta e desabilita o filtro geral ao sair do levantamento
+      resetFiltroGeral(false);
 
       levantamentoPontos = [];
       stackGroups = null;
@@ -2675,8 +3571,18 @@
       }
     }
 
-    // Fecha spiderfy quando o usuário interage com o mapa
-    map.on("click zoomstart movestart", () => unspiderfy());
+    // Fecha spiderfy e esconde o tooltip compartilhado (posição ficaria
+    // errada durante o movimento) quando o usuário interage com o mapa.
+    map.on("click zoomstart movestart", () => {
+      unspiderfy();
+      esconderTooltipCompartilhado();
+    });
+
+    // Culling por viewport (ver atualizarPontosVisiveis) — recalcula, com
+    // debounce, o que deve estar no mapa a cada pan/zoom. Guard interno
+    // (onMapaMoveOuZoomEnd) garante que só roda dentro do modo levantamento.
+    map.on("moveend", onMapaMoveOuZoomEnd);
+    map.on("zoomend", onMapaMoveOuZoomEnd);
 
     // Listeners de UI
     document.getElementById("btn-levantamento").addEventListener("click", abrirModalLevantamento);
@@ -2697,7 +3603,32 @@
     document.getElementById("btn-download").addEventListener("click", exportarDados);
     document.getElementById("btn-maptype").addEventListener("click", cicloMapType);
     document.getElementById("data-range").addEventListener("input", onDataRangeInput);
-    document.getElementById("tombamento").addEventListener("input", onTombamentoInput);
+
+    // Filtro geral de pontos
+    document.getElementById("filtro-geral").addEventListener("input", onFiltroGeralInput);
+    document.getElementById("filtro-geral").addEventListener("keydown", e => {
+      if (e.key === "Escape") { fecharSugestoesFiltro(); e.target.blur(); }
+      if (e.key === "Enter") fecharSugestoesFiltro();
+    });
+    document.getElementById("filtro-chip").addEventListener("click", () => {
+      const inp = document.getElementById("filtro-geral");
+      const m = inp.value.match(/^([A-Za-z_]+)\s*:\s*(.*)$/);
+      inp.value = m ? m[2] : "";
+      levFiltroExecutar();
+      inp.focus();
+    });
+    document.getElementById("filtro-help-btn").addEventListener("click", (e) => {
+      e.stopPropagation();
+      const pop = document.getElementById("filtro-help-popover");
+      if (pop.classList.contains("show")) fecharAjudaFiltro();
+      else abrirAjudaFiltro();
+    });
+    document.addEventListener("click", e => {
+      if (!e.target.closest(".filtro-wrap")) {
+        fecharSugestoesFiltro();
+        fecharAjudaFiltro();
+      }
+    });
 
     // Lista de KMLs de transformadores — delegacao de evento para checkboxes
     document.getElementById("kml-trafos-lista").addEventListener("change", (e) => {
