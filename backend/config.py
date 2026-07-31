@@ -85,8 +85,11 @@ LARGURA_BORDA = 0
 # LEVANTAMENTO — planilhas por município (somente leitura)
 # =============================================================================
 # Base path onde ficam as pastas dos municípios. Estrutura esperada:
-#   <BASE>/<NOME_MUNICIPIO>/AUDITORIA/<LEVANTAMENTO_ARQUIVO_PREFIXO>*.xlsm
-# Comparação de nomes é case-insensitive em todas as etapas.
+#   <BASE>/<NOME_MUNICIPIO>/<LEVANTAMENTO_SUBPASTA>/<PREFIXO>*.xlsm
+#   <BASE>/<NOME_MUNICIPIO>/<LEVANTAMENTO_SUBPASTA_PRIORITARIA>/<PREFIXO>*.xlsm
+# A subpasta prioritária (quando existe e contém planilha válida — com a
+# folha obrigatória LEVANTAMENTO_ABA) tem precedência sobre a subpasta
+# padrão. Comparação de nomes é case-insensitive em todas as etapas.
 # LEVANTAMENTOS_BASE_PATH e a base do ano atual (obrigatoria). As demais
 # LEVANTAMENTOS_BASE_PATH_<ANO> (anos anteriores) sao opcionais — o server
 # descobre automaticamente todas as que existirem no .env.
@@ -94,16 +97,60 @@ LEVANTAMENTOS_BASE_PATH      = _caminho_obrigatorio("LEVANTAMENTOS_BASE_PATH")
 LEVANTAMENTOS_BASE_PATH_2025 = _caminho_opcional("LEVANTAMENTOS_BASE_PATH_2025")
 LEVANTAMENTOS_BASE_PATH_2024 = _caminho_opcional("LEVANTAMENTOS_BASE_PATH_2024")
 
-# Prefixo do nome do arquivo de levantamento dentro de AUDITORIA/
+# Prefixo do nome do arquivo de levantamento dentro da subpasta
 LEVANTAMENTO_ARQUIVO_PREFIXO = _env_opcional("LEVANTAMENTO_ARQUIVO_PREFIXO", "FECHAMENTO")
 
 # Diretório onde os caches por município são gravados
 LEVANTAMENTOS_CACHE_DIR = "../data/cache_levantamentos"
 
+# Nomes de pasta e de folha são sensíveis (identificam a operação interna) —
+# vêm inteiramente do .env, nunca ficam hardcoded aqui.
+LEVANTAMENTO_SUBPASTA             = _env_opcional("LEVANTAMENTO_SUBPASTA")
+LEVANTAMENTO_SUBPASTA_PRIORITARIA = _env_opcional("LEVANTAMENTO_SUBPASTA_PRIORITARIA")
+
+# Folha obrigatória — sempre usada, em qualquer uma das duas subpastas.
+LEVANTAMENTO_ABA = os.environ.get("LEVANTAMENTO_ABA")
+if not LEVANTAMENTO_ABA:
+    raise RuntimeError(
+        "Variavel de ambiente 'LEVANTAMENTO_ABA' nao definida.\n"
+        "Copie .env.example para .env na raiz do projeto e preencha o nome "
+        "da folha obrigatoria da planilha de levantamento."
+    )
+
+# Folhas extras — só existem na planilha da subpasta prioritária. Cada uma
+# vira uma categoria de pontos no mapa, na ordem declarada. Lista vazia se
+# não houver subpasta prioritária configurada.
+LEVANTAMENTO_ABAS_EXTRAS = [
+    a.strip() for a in _env_opcional("LEVANTAMENTO_ABAS_EXTRAS").split("|") if a.strip()
+]
+
+# Qual folha extra (se houver) tem pontos que também existem na folha
+# obrigatória e devem sobrepor o ponto correspondente quando marcada.
+LEVANTAMENTO_ABA_SOBREPOSTA = _env_opcional("LEVANTAMENTO_ABA_SOBREPOSTA") or None
+
+# Par origem/alvo para a categoria derivada "origem + alvo" (ver
+# levantamento_reader.py). None se o par não estiver configurado.
+LEVANTAMENTO_ABA_CIRCUITO_ORIGEM = _env_opcional("LEVANTAMENTO_ABA_CIRCUITO_ORIGEM") or None
+LEVANTAMENTO_ABA_CIRCUITO_ALVO   = _env_opcional("LEVANTAMENTO_ABA_CIRCUITO_ALVO") or None
+
+# Coluna de circuito usada para calcular a categoria derivada acima.
+COLUNA_CIRCUITO = "MEDIDOR_NC"
+
+# Nomes de coluna aceitos para a identidade do ponto (dedup entre folhas).
+# Sempre a PRIMEIRA coluna do cabeçalho cujo nome bata com um destes.
+COLUNAS_ID = ["ID_PONTO", "ID"]
+
+# Paleta usada para colorir as categorias extras, por posição em
+# LEVANTAMENTO_ABAS_EXTRAS. A folha obrigatória mantém sua própria lógica
+# de cor (MEDICAO/PONTOTRAFO) e não usa esta paleta.
+PALETA_CATEGORIAS = [
+    "#7C6FF7", "#22D3EE", "#F97316", "#E879F9",
+    "#84CC16", "#F43F5E", "#38BDF8", "#FBBF24",
+]
+
 # Aba e colunas usadas no levantamento
-LEVANTAMENTO_ABA = "BASE TRATADA"
-COLUNA_LAT       = "LATITUDE"
-COLUNA_LON       = "LONGITUDE"
+COLUNA_LAT = "LATITUDE"
+COLUNA_LON = "LONGITUDE"
 
 # Colunas que aparecem no painel lateral (na ordem desejada).
 # Lookup case-insensitive — colunas ausentes na planilha viram string vazia.
@@ -133,19 +180,19 @@ COR_MEDICAO_NAO = "#1E3A8A"  # azul escuro
 # TRANSFORMADORES (KML) — visualizacao opcional de transformadores por municipio
 # =============================================================================
 # Estrutura esperada:
-#   <BASE>/<NOME_MUNICIPIO>/LOTES/*.kml
+#   <BASE>/<NOME_MUNICIPIO>/<TRANSFORMADORES_LOTES_SUB>/*.kml
 # Nomes podem variar de caixa/acentos; o matching e feito normalizando
 # nomes para apenas alfanumericos em lowercase.
 TRANSFORMADORES_BASE_PATH = _caminho_opcional("TRANSFORMADORES_BASE_PATH")
-TRANSFORMADORES_LOTES_SUB = "LOTES"
+TRANSFORMADORES_LOTES_SUB = _env_opcional("TRANSFORMADORES_SUBPASTA")
 TRANSFORMADORES_CACHE_DIR = "../data/cache_transformadores"
 
 # =============================================================================
 # AREAS INACESSIVEIS (GPKG) - visualizacao opcional de poligonos por municipio
 # =============================================================================
 # Estrutura esperada:
-#   <BASE>/<NOME_MUNICIPIO>/AREAS_INACESSIVEIS/*.gpkg
+#   <BASE>/<NOME_MUNICIPIO>/<AREAS_INACESSIVEIS_SUB>/*.gpkg
 # Mesma logica do transformadores, mas le .gpkg (GeoPackage) ao inves de .kml.
 AREAS_INACESSIVEIS_BASE_PATH = _caminho_opcional("AREAS_INACESSIVEIS_BASE_PATH")
-AREAS_INACESSIVEIS_SUB       = "AREAS_INACESSIVEIS"
+AREAS_INACESSIVEIS_SUB       = _env_opcional("AREAS_INACESSIVEIS_SUBPASTA")
 AREAS_INACESSIVEIS_CACHE_DIR = "../data/cache_areas_inacessiveis"

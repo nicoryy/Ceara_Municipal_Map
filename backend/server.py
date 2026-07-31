@@ -218,11 +218,14 @@ def levantamento(key):
         nome  = _resolver_nome(key)
         bases = _bases_levantamento_ordenadas()
         log.info(f"[levantamento] {nome} -> bases={bases}")
-        dados = carregar_levantamento(config, nome, bases=bases)
+        resultado = carregar_levantamento(config, nome, bases=bases)
+        pontos = resultado["pontos"]
         return jsonify({
-            "municipio": nome,
-            "total":     len(dados),
-            "pontos":    dados,
+            "municipio":  nome,
+            "total":      len(pontos),
+            "pontos":     pontos,
+            "categorias": resultado.get("categorias", []),
+            "entrega":    resultado.get("entrega", False),
         })
     except FileNotFoundError as e:
         log.warning(f"[levantamento] 404: {e}")
@@ -242,8 +245,8 @@ def levantamento(key):
 def export_municipio(key):
     """
     Retorna um ZIP com:
-      - <slug>/AREAS_INACESSIVEIS/*.gpkg (raw, se existir)
-      - <slug>/LOTES/*.kml (raw, se existir)
+      - <slug>/<AREAS_INACESSIVEIS_SUB>/*.gpkg (raw, se existir)
+      - <slug>/<TRANSFORMADORES_LOTES_SUB>/*.kml (raw, se existir)
     Os KMLs gerados (pontos, borda) sao montados pelo frontend.
     """
     try:
@@ -256,9 +259,9 @@ def export_municipio(key):
     buf = io.BytesIO()
     incluidos = 0
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
-        for base, sub in [
-            (config.AREAS_INACESSIVEIS_BASE_PATH, "AREAS_INACESSIVEIS"),
-            (config.TRANSFORMADORES_BASE_PATH,    "LOTES"),
+        for base, sub, ext in [
+            (config.AREAS_INACESSIVEIS_BASE_PATH, config.AREAS_INACESSIVEIS_SUB, ".gpkg"),
+            (config.TRANSFORMADORES_BASE_PATH,    config.TRANSFORMADORES_LOTES_SUB, ".kml"),
         ]:
             try:
                 from transformadores_reader import _find_municipio_folder, _normalize
@@ -274,7 +277,6 @@ def export_municipio(key):
                     break
             if not sub_path:
                 continue
-            ext = ".gpkg" if sub == "AREAS_INACESSIVEIS" else ".kml"
             for entry in sorted(os.listdir(sub_path)):
                 if entry.lower().endswith(ext):
                     src = os.path.join(sub_path, entry)

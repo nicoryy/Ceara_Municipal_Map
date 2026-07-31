@@ -2,7 +2,7 @@
 areas_inacessiveis_reader.py
 
 Le as areas inacessiveis de um municipio a partir dos arquivos .gpkg em:
-    <AREAS_INACESSIVEIS_BASE_PATH>/<NOME>/AREAS_INACESSIVEIS/*.gpkg
+    <AREAS_INACESSIVEIS_BASE_PATH>/<NOME>/<AREAS_INACESSIVEIS_SUB>/*.gpkg
 
 Cada feature do GeoPackage e extraido e convertido para uma geometria GeoJSON.
 Cache por municipio invalidado por hash da lista de (nome_arquivo, mtime, size).
@@ -234,7 +234,7 @@ def carregar_areas_inacessiveis(config, nome_municipio: str):
     Retorna dict: {"features": [...], "arquivos": N}.
     """
     base      = config.AREAS_INACESSIVEIS_BASE_PATH
-    sub       = getattr(config, "AREAS_INACESSIVEIS_SUB", "AREAS_INACESSIVEIS")
+    sub       = config.AREAS_INACESSIVEIS_SUB
     cache_dir = config.AREAS_INACESSIVEIS_CACHE_DIR
 
     folder   = _find_municipio_folder(base, nome_municipio)

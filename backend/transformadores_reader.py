@@ -2,7 +2,7 @@
 transformadores_reader.py
 
 Le os transformadores de um municipio a partir dos arquivos .kml em:
-    <TRANSFORMADORES_BASE_PATH>/<NOME>/LOTES/*.kml
+    <TRANSFORMADORES_BASE_PATH>/<NOME>/<TRANSFORMADORES_LOTES_SUB>/*.kml
 
 Cada Placemark/Point e extraido como {lat, lng}. Cache por municipio
 invalidado por hash da lista de (nome_arquivo, mtime).
@@ -170,7 +170,7 @@ def carregar_transformadores(config, nome_municipio: str):
     Ordenada por nome do arquivo.
     """
     base       = config.TRANSFORMADORES_BASE_PATH
-    sub        = getattr(config, "TRANSFORMADORES_LOTES_SUB", "LOTES")
+    sub        = config.TRANSFORMADORES_LOTES_SUB
     cache_dir  = config.TRANSFORMADORES_CACHE_DIR
 
     folder    = _find_municipio_folder(base, nome_municipio)
