@@ -642,6 +642,93 @@
       opacity: .6;
     }
 
+    /* ── painel de categorias (canto superior esquerdo do mapa) ──
+       Só aparece dentro do levantamento quando a planilha de entrega
+       trouxe mais de uma categoria (ver inicializarCategorias). */
+    #cat-panel {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      max-width: 260px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 4px 14px rgba(0,0,0,.45);
+      z-index: 600;
+      display: none;
+    }
+    #cat-panel.show {
+      display: block;
+    }
+    .cat-panel-titulo {
+      padding: 10px 12px 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .03em;
+    }
+    .cat-panel-acoes {
+      display: flex;
+      gap: 10px;
+      padding: 0 12px 6px;
+      font-size: 11px;
+    }
+    .cat-panel-acao {
+      color: var(--accent);
+      cursor: pointer;
+      user-select: none;
+    }
+    .cat-panel-acao:hover {
+      text-decoration: underline;
+    }
+    #cat-panel-lista {
+      padding: 2px 8px 8px;
+      max-height: 320px;
+      overflow-y: auto;
+    }
+    .cat-panel-item {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 5px 6px;
+      border-radius: 6px;
+      cursor: pointer;
+      user-select: none;
+      font-size: 12px;
+      color: var(--text);
+      transition: background .12s;
+    }
+    .cat-panel-item:hover {
+      background: var(--surface2);
+    }
+    .cat-panel-item input[type="checkbox"] {
+      accent-color: var(--accent);
+      cursor: pointer;
+      flex-shrink: 0;
+      margin: 0;
+    }
+    .cat-panel-cor {
+      width: 11px;
+      height: 11px;
+      border-radius: 3px;
+      flex-shrink: 0;
+      border: 1px solid rgba(255,255,255,.25);
+    }
+    .cat-panel-nome {
+      flex: 1;
+      word-break: break-word;
+    }
+    .cat-panel-count {
+      font-size: 11px;
+      color: var(--muted);
+      background: var(--bg);
+      padding: 1px 6px;
+      border-radius: 10px;
+      font-family: monospace;
+      flex-shrink: 0;
+    }
+
     /* ── overlay de loading centralizado no mapa ── */
     .map-loading {
       position: absolute;
@@ -1146,6 +1233,14 @@
       <button id="btn-transformadores" title="Mostrar/ocultar transformadores">★</button>
       <button id="btn-areas" title="Mostrar/ocultar áreas inacessíveis">⚠</button>
       <button id="btn-download" title="Exportar dados">⭳</button>
+      <div id="cat-panel">
+        <div class="cat-panel-titulo">Categorias</div>
+        <div class="cat-panel-acoes">
+          <span class="cat-panel-acao" id="cat-panel-all">Selecionar todas</span>
+          <span class="cat-panel-acao" id="cat-panel-none">Limpar</span>
+        </div>
+        <div id="cat-panel-lista"></div>
+      </div>
       <div id="lev-tooltip" class="lev-tooltip"></div>
       <div id="map-loading" class="map-loading">
         <div class="loading-spinner"></div>
@@ -1505,6 +1600,14 @@
     let passMask    = null;   // Uint8Array — 1 se o ponto passa no filtro atual
     let levIndexando = false; // true durante a indexação preguiçosa (fatiada)
 
+    // Categorias de pontos (só existe mais de uma quando o levantamento veio
+    // da planilha de "entrega" — ver /levantamento no backend). Cada ponto
+    // tem p.__cat apontando pro id de uma destas categorias.
+    let categorias       = [];          // [{id, rotulo, cor, total, papel, padrao_visivel}], na ordem da API
+    let categoriasAtivas = new Set();   // ids de categoria atualmente visíveis
+    let catSobrepostaId  = null;        // id da categoria "sobreposta" (ex.: transformadores), se houver
+    let corPorCategoria  = new Map();   // id -> cor (categoria "base" não entra aqui — mantém corDoPonto)
+
     // Constantes de cor dos pontos (espelham backend/config.py)
     const COR_MEDICAO_SIM = "#7CFC00";
     const COR_MEDICAO_NAO = "#1E3A8A";
@@ -1528,10 +1631,11 @@
     // MAPA
     // ════════════════════════════════════════════════════════════
     const map = L.map("map", {
-      zoomControl: true,
+      zoomControl: false,   // recriado abaixo em bottomleft — topleft é do #cat-panel
       attributionControl: false,
       maxZoom: 21,
     });
+    L.control.zoom({ position: "bottomleft" }).addTo(map);
     if (window.PERF) window.PERF.attachMap(map);
 
     // ──────────────────────────────────────────────
@@ -2300,6 +2404,10 @@
         const perfTFetch = perfOn ? performance.now() : 0;
         const json = await r.json();
         const perfTParse = perfOn ? performance.now() : 0;
+        // Categorias (só existem quando o backend leu a planilha de entrega)
+        // precisam estar prontas ANTES de desenharPontos — corDoPonto()
+        // consulta corPorCategoria ao criar cada marker.
+        inicializarCategorias(json.categorias || []);
         // Liga o modo levantamento ANTES do fly-to de bloquearMapa: o
         // flyToBounds daquela função só termina de fato (moveend) alguns
         // frames depois, de forma assíncrona — nesse meio tempo map.getBounds()
@@ -2383,6 +2491,11 @@
     }
 
     function corDoPonto(p) {
+      // Categorias extras (entrega) têm cor própria da paleta; a categoria
+      // "base" (ou levantamento sem entrega) mantém a lógica de MEDICAO/
+      // PONTOTRAFO abaixo — corPorCategoria não tem entrada pra ela.
+      const corCategoria = corPorCategoria.get(p.__cat);
+      if (corCategoria) return corCategoria;
       const m = String(p.MEDICAO || "").trim().toUpperCase();
       const ehInspecao = m === "SIM";
       const trafo = String(p.PONTOTRAFO || "").trim().toUpperCase();
@@ -2528,13 +2641,18 @@
       stackGroups = new Map();
       levantamentoMarkers = new Map();
 
-      // Agrupa por coordenada exata. __idx espelha a posição em `pontos` —
-      // usado pelo índice do filtro geral (levIndex/passMask) para achar a
-      // linha de cada ponto sem precisar re-normalizar strings a cada busca.
+      // Agrupa por coordenada exata + categoria. __idx espelha a posição em
+      // `pontos` — usado pelo índice do filtro geral (levIndex/passMask)
+      // para achar a linha de cada ponto sem precisar re-normalizar strings
+      // a cada busca. A categoria entra na chave porque markers são criados
+      // uma única vez e nunca recoloridos (ver criarMarkerParaGrupo) — sem
+      // isso, um ponto sobreposto (ex.: transformador) dividiria marker com
+      // o ponto da base na mesma coordenada e a cor ficaria presa à do
+      // primeiro grupo criado.
       for (let i = 0; i < pontos.length; i++) {
         const p = pontos[i];
         p.__idx = i;
-        const k = chaveCoord(p.lat, p.lng);
+        const k = chaveCoord(p.lat, p.lng) + "|" + (p.__cat || "");
         if (!stackGroups.has(k)) stackGroups.set(k, []);
         stackGroups.get(k).push(p);
       }
@@ -2753,7 +2871,7 @@
       const lista = document.getElementById("kml-trafos-lista");
       if (!lista) return;
       if (!transformadoresArquivos.length) {
-        lista.innerHTML = `<div class="placeholder" style="margin-top:8px;font-size:12px">Nenhum KML encontrado em LOTES.</div>`;
+        lista.innerHTML = `<div class="placeholder" style="margin-top:8px;font-size:12px">Nenhum KML encontrado.</div>`;
         return;
       }
       const html = transformadoresArquivos.map(g => {
@@ -2879,6 +2997,75 @@
       return `${dd}/${mm}/${d.getFullYear()}`;
     }
 
+    // ════════════════════════════════════════════════════════════
+    // PAINEL DE CATEGORIAS (canto superior esquerdo do mapa)
+    // Só existe mais de uma categoria quando o backend leu a planilha de
+    // entrega (ver /levantamento). Nomes de folha nunca ficam hardcoded
+    // aqui — vêm inteiramente de json.categorias, que por sua vez vem do
+    // .env no backend (LEVANTAMENTO_ABAS_EXTRAS etc).
+    // ════════════════════════════════════════════════════════════
+
+    function inicializarCategorias(categoriasApi) {
+      categorias = categoriasApi || [];
+      categoriasAtivas = new Set();
+      corPorCategoria = new Map();
+      catSobrepostaId = null;
+      for (const c of categorias) {
+        if (c.padrao_visivel) categoriasAtivas.add(c.id);
+        if (c.cor) corPorCategoria.set(c.id, c.cor);
+        if (c.papel === "sobreposta") catSobrepostaId = c.id;
+      }
+      renderPainelCategorias();
+    }
+
+    function limparCategorias() {
+      categorias = [];
+      categoriasAtivas = new Set();
+      corPorCategoria = new Map();
+      catSobrepostaId = null;
+      document.getElementById("cat-panel").classList.remove("show");
+      document.getElementById("cat-panel-lista").innerHTML = "";
+    }
+
+    function renderPainelCategorias() {
+      const painel = document.getElementById("cat-panel");
+      const lista  = document.getElementById("cat-panel-lista");
+      // Só faz sentido mostrar o painel quando há mais de uma categoria —
+      // levantamento sem entrega (categorias = [{base}] ou []) fica igual a hoje.
+      if (categorias.length <= 1) {
+        painel.classList.remove("show");
+        lista.innerHTML = "";
+        return;
+      }
+      lista.innerHTML = categorias.map(c => {
+        const checked = categoriasAtivas.has(c.id) ? "checked" : "";
+        const nomeEsc = escapeHtml(c.rotulo);
+        const cor     = c.cor || "var(--muted)";
+        return `
+          <label class="cat-panel-item" data-cat="${escapeHtml(c.id)}">
+            <input type="checkbox" ${checked} />
+            <span class="cat-panel-cor" style="background:${cor}"></span>
+            <span class="cat-panel-nome">${nomeEsc}</span>
+            <span class="cat-panel-count">${c.total}</span>
+          </label>`;
+      }).join("");
+      painel.classList.add("show");
+    }
+
+    function setVisibilidadeCategoria(catId, visivel) {
+      if (visivel) categoriasAtivas.add(catId);
+      else categoriasAtivas.delete(catId);
+      atualizarPontosVisiveis();
+      atualizarContadorFiltro();
+    }
+
+    function aplicarVisibilidadeCategoriasEmMassa(visivel) {
+      categoriasAtivas = visivel ? new Set(categorias.map(c => c.id)) : new Set();
+      renderPainelCategorias();
+      atualizarPontosVisiveis();
+      atualizarContadorFiltro();
+    }
+
     function configurarRangeData(pontos) {
       const wrap = document.getElementById("data-range-wrap");
       const datas = [];
@@ -2919,10 +3106,23 @@
       return passMask[p.__idx] === 1;
     }
 
+    // Sem entrega, categorias fica vazio e todo ponto passa (comportamento
+    // idêntico ao levantamento comum, hoje). Com entrega, um ponto só é
+    // visível se sua categoria (p.__cat) estiver marcada no painel — e um
+    // ponto da base "coberto" por um ponto sobreposto (ex.: transformador)
+    // some quando a categoria sobreposta estiver visível, dando lugar ao
+    // ponto que o substitui (ver corte no backend, levantamento_reader.py).
+    function pontoDentroDoFiltroCategoria(p) {
+      if (!categorias.length) return true;
+      if (!categoriasAtivas.has(p.__cat)) return false;
+      if (p.__coberto && catSobrepostaId && categoriasAtivas.has(catSobrepostaId)) return false;
+      return true;
+    }
+
     // Predicado combinado: um ponto so e exibido se passa por todos os filtros
-    // ativos do modo levantamento (data + filtro geral).
+    // ativos do modo levantamento (data + filtro geral + categoria).
     function pontoVisivel(p) {
-      return pontoDentroDoFiltroData(p) && pontoDentroDoFiltroGeral(p);
+      return pontoDentroDoFiltroData(p) && pontoDentroDoFiltroGeral(p) && pontoDentroDoFiltroCategoria(p);
     }
 
     // Decide, pra cada grupo de coordenada, se ele deve estar no mapa —
@@ -3331,17 +3531,44 @@
       return "";
     }
 
+    function criarPlacemarkPonto(p) {
+      const id = escapeXml(p.ID_PONTO || "");
+      const desc = COLUNAS_LEVANTAMENTO
+        .filter(c => p[c] !== undefined && p[c] !== "")
+        .map(c => `${c}: ${p[c]}`).join("\n");
+      return `<Placemark><name>${id}</name><description>${escapeXml(desc)}</description>` +
+             `<Point><coordinates>${p.lng},${p.lat}</coordinates></Point></Placemark>`;
+    }
+
     function gerarKmlPontos(pontos, nome) {
-      const placemarks = pontos.map(p => {
-        const id = escapeXml(p.ID_PONTO || "");
-        const desc = COLUNAS_LEVANTAMENTO
-          .filter(c => p[c] !== undefined && p[c] !== "")
-          .map(c => `${c}: ${p[c]}`).join("\n");
-        return `<Placemark><name>${id}</name><description>${escapeXml(desc)}</description>` +
-               `<Point><coordinates>${p.lng},${p.lat}</coordinates></Point></Placemark>`;
-      }).join("");
+      let corpo;
+      // Só agrupa em <Folder> por categoria quando o levantamento tem mais
+      // de uma (entrega). Pontos sem categoria (ex.: transformadores, que
+      // reusam esta função com objetos sintéticos {ID_PONTO,lat,lng}) caem
+      // fora de qualquer folder, como placemarks soltos.
+      if (categorias.length > 1) {
+        const porCategoria = new Map();
+        const semCategoria = [];
+        for (const p of pontos) {
+          const cat = categoriaDoPonto(p);
+          if (cat) {
+            if (!porCategoria.has(cat.id)) porCategoria.set(cat.id, []);
+            porCategoria.get(cat.id).push(p);
+          } else {
+            semCategoria.push(p);
+          }
+        }
+        const folders = categorias
+          .filter(c => porCategoria.has(c.id))
+          .map(c => `<Folder><name>${escapeXml(c.rotulo)}</name>` +
+                    `${porCategoria.get(c.id).map(criarPlacemarkPonto).join("")}</Folder>`)
+          .join("");
+        corpo = folders + semCategoria.map(criarPlacemarkPonto).join("");
+      } else {
+        corpo = pontos.map(criarPlacemarkPonto).join("");
+      }
       return `<?xml version="1.0" encoding="UTF-8"?>
-<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>${escapeXml(nome)}</name>${placemarks}</Document></kml>`;
+<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>${escapeXml(nome)}</name>${corpo}</Document></kml>`;
     }
 
     function gerarKmlBorda(feature, nome) {
@@ -3470,9 +3697,30 @@
            + ` <span class="point-obs-toggle">Ver mais</span></span>`;
     }
 
+    function categoriaDoPonto(p) {
+      return categorias.find(c => c.id === p.__cat) || null;
+    }
+
     function mostrarPontoNoPainel(p) {
       const linhas = [];
       linhas.push(`<div class="point-titulo">Ponto ${escapeHtml(p.ID_PONTO || "—")}</div>`);
+      // Só existe mais de uma categoria quando o levantamento veio da
+      // planilha de entrega — sem entrega, nada muda aqui.
+      if (categorias.length > 1) {
+        const cat = categoriaDoPonto(p);
+        if (cat) {
+          const cor = cat.cor || "var(--muted)";
+          linhas.push(
+            `<div class="point-row">
+               <span class="point-label">Categoria</span>
+               <span class="point-value">
+                 <span class="cat-panel-cor" style="display:inline-block;vertical-align:middle;background:${cor}"></span>
+                 ${escapeHtml(cat.rotulo)}
+               </span>
+             </div>`
+          );
+        }
+      }
       for (const col of COLUNAS_LEVANTAMENTO) {
         const valor = p[col];
         if (valor === undefined) continue;
@@ -3545,6 +3793,7 @@
       levantamentoPontos = [];
       stackGroups = null;
       levantamentoMarkers = new Map();
+      limparCategorias();
 
       if (geojsonLayer && !map.hasLayer(geojsonLayer)) geojsonLayer.addTo(map);
       if (regionaisLayer && !map.hasLayer(regionaisLayer)) regionaisLayer.addTo(map);
@@ -3641,6 +3890,24 @@
     });
     document.getElementById("kml-trafos-all").addEventListener("click", () => aplicarVisibilidadeKmlsEmMassa(true));
     document.getElementById("kml-trafos-none").addEventListener("click", () => aplicarVisibilidadeKmlsEmMassa(false));
+
+    // Painel de categorias — delegacao de evento para checkboxes, igual ao
+    // padrao de KMLs de transformadores acima. disableClickPropagation e
+    // disableScrollPropagation evitam que clicar/rolar dentro do painel
+    // (que fica sobre o mapa) pane/dê zoom no Leaflet por baixo.
+    const catPanelEl = document.getElementById("cat-panel");
+    L.DomEvent.disableClickPropagation(catPanelEl);
+    L.DomEvent.disableScrollPropagation(catPanelEl);
+    document.getElementById("cat-panel-lista").addEventListener("change", (e) => {
+      const cb = e.target.closest('input[type="checkbox"]');
+      if (!cb) return;
+      const item = cb.closest(".cat-panel-item");
+      const catId = item && item.dataset.cat;
+      if (!catId) return;
+      setVisibilidadeCategoria(catId, cb.checked);
+    });
+    document.getElementById("cat-panel-all").addEventListener("click", () => aplicarVisibilidadeCategoriasEmMassa(true));
+    document.getElementById("cat-panel-none").addEventListener("click", () => aplicarVisibilidadeCategoriasEmMassa(false));
 
     // ════════════════════════════════════════════════════════════
     // INIT
