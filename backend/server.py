@@ -134,6 +134,9 @@ def municipios():
         dados = _get_dados()
     except FileNotFoundError as e:
         return jsonify({"erro": str(e)}), 404
+    except PermissionError as e:
+        log.warning(f"[municipios] 503: {e}")
+        return jsonify({"erro": str(e)}), 503
     except Exception as e:
         log.error(f"Erro ao carregar dados: {e}")
         return jsonify({"erro": str(e)}), 500
@@ -163,6 +166,9 @@ def reload_dados():
             "fonte":     _estado["fonte"],
             "gerado_em": _estado["gerado_em"],
         })
+    except PermissionError as e:
+        log.warning(f"[reload] 503: {e}")
+        return jsonify({"ok": False, "erro": str(e)}), 503
     except Exception as e:
         log.error(f"Erro no reload: {e}")
         return jsonify({"ok": False, "erro": str(e)}), 500
@@ -226,6 +232,8 @@ def levantamento(key):
             "pontos":     pontos,
             "categorias": resultado.get("categorias", []),
             "entrega":    resultado.get("entrega", False),
+            "stale":      resultado.get("stale", False),
+            "gerado_em":  resultado.get("gerado_em"),
         })
     except FileNotFoundError as e:
         log.warning(f"[levantamento] 404: {e}")

@@ -765,6 +765,31 @@
       text-align: center;
     }
 
+    /* ── aviso flutuante (ex.: dados de cache porque a planilha esta em uso) ── */
+    .map-aviso {
+      position: absolute;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: none;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 16px;
+      font-size: 13px;
+      box-shadow: 0 6px 18px rgba(0,0,0,.45);
+      max-width: 80%;
+      text-align: center;
+      z-index: 750;
+      pointer-events: none;
+    }
+    .map-aviso.show {
+      display: flex;
+    }
+
     /* ── modal ── */
     .modal-overlay {
       position: fixed;
@@ -1246,6 +1271,7 @@
         <div class="loading-spinner"></div>
         <div class="loading-text" id="map-loading-text">Carregando…</div>
       </div>
+      <div id="map-aviso" class="map-aviso"></div>
     </div>
 
     <div id="painel">
@@ -2408,6 +2434,9 @@
         // precisam estar prontas ANTES de desenharPontos — corDoPonto()
         // consulta corPorCategoria ao criar cada marker.
         inicializarCategorias(json.categorias || []);
+        if (json.stale) {
+          mostrarAviso(`Planilha em uso — mostrando dados de ${json.gerado_em || "cache anterior"}`);
+        }
         // Liga o modo levantamento ANTES do fly-to de bloquearMapa: o
         // flyToBounds daquela função só termina de fato (moveend) alguns
         // frames depois, de forma assíncrona — nesse meio tempo map.getBounds()
@@ -2787,6 +2816,18 @@
     }
     function esconderLoading() {
       document.getElementById("map-loading").classList.remove("show");
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Aviso flutuante (ex.: planilha em uso, mostrando o ultimo cache)
+    // ─────────────────────────────────────────────────────────────────────────
+    let avisoTimeoutId = null;
+    function mostrarAviso(texto) {
+      const el = document.getElementById("map-aviso");
+      el.textContent = texto;
+      el.classList.add("show");
+      if (avisoTimeoutId) clearTimeout(avisoTimeoutId);
+      avisoTimeoutId = setTimeout(() => el.classList.remove("show"), 6000);
     }
 
     // ─────────────────────────────────────────────────────────────────────────

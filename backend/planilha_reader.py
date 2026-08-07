@@ -6,7 +6,9 @@ Estratégia de leitura (em ordem de prioridade):
 1. xlwings  — só usa se o Excel JÁ está com o arquivo aberto.
              NUNCA abre o arquivo em background.
 2. openpyxl — lê o arquivo salvo em disco (funciona com Excel fechado).
-             Requer que o OneDrive tenha sincronizado a versão mais recente.
+             Se o arquivo estiver bloqueado (Excel/OneDrive segurando a
+             trava), tenta ler uma cópia temporária — ver
+             excel_util.abrir_workbook_somente_leitura().
 
 Detecção de mudança: usa os.path.getmtime() (timestamp do arquivo).
 Não abre o arquivo para calcular hash — resolve o Permission denied.
@@ -16,6 +18,8 @@ import json
 import os
 import logging
 from datetime import datetime
+
+from excel_util import abrir_workbook_somente_leitura, limpar_temp
 
 log = logging.getLogger(__name__)
 
@@ -88,24 +92,22 @@ def ler_via_xlwings(path, aba, col_ibge, col_status, col_tipo, col_municipio=Non
 # ─────────────────────────────────────────────────────────────────────────────
 
 def ler_via_openpyxl(path, aba, col_ibge, col_status, col_tipo, col_municipio=None, col_ano=None):
-    from openpyxl import load_workbook
     log.info(f"[openpyxl] Lendo arquivo em disco: {os.path.basename(path)}")
     try:
-        wb = load_workbook(path, read_only=True, data_only=True, keep_vba=False)
+        wb, tmp = abrir_workbook_somente_leitura(path)
     except PermissionError:
-        raise PermissionError(
-            f"Arquivo bloqueado: {os.path.basename(path)}\n"
-            "Salve a planilha no Excel (Ctrl+S) e clique em Recarregar."
-        )
+        raise
     except Exception as e:
         raise RuntimeError(f"Erro ao abrir planilha: {e}")
-    if aba not in wb.sheetnames:
-        abas = ", ".join(wb.sheetnames)
+    try:
+        if aba not in wb.sheetnames:
+            abas = ", ".join(wb.sheetnames)
+            raise ValueError(f"Aba '{aba}' não encontrada. Abas disponíveis: {abas}")
+        sheet = wb[aba]
+        linhas = list(sheet.iter_rows(values_only=True))
+    finally:
         wb.close()
-        raise ValueError(f"Aba '{aba}' não encontrada. Abas disponíveis: {abas}")
-    sheet = wb[aba]
-    linhas = list(sheet.iter_rows(values_only=True))
-    wb.close()
+        limpar_temp(tmp)
     if not linhas:
         raise ValueError("Aba vazia")
     cabecalho = [str(c).strip() if c else "" for c in linhas[0]]

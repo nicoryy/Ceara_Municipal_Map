@@ -15,6 +15,11 @@ Estrategia:
 - Toda comparacao de nomes (pasta, arquivo, aba, colunas) e case-insensitive.
 - Cache por municipio invalidado por mtime do arquivo e pelo proprio caminho
   (troca entre entrega/padrao invalida o cache automaticamente).
+- Arquivos-trava do Excel ("~$NOME.xlsm") sao ignorados na busca — ver
+  excel_util.eh_arquivo_trava_excel(). Se a planilha estiver aberta no Excel
+  e nao puder ser lida diretamente, tenta uma copia temporaria (ver
+  excel_util.abrir_workbook_somente_leitura()); se nem isso funcionar, cai
+  para o ultimo cache valido em vez de falhar (ver carregar_levantamento()).
 """
 
 import glob
@@ -25,6 +30,8 @@ import logging
 import warnings
 import unicodedata
 from datetime import datetime
+
+from excel_util import abrir_workbook_somente_leitura, eh_arquivo_trava_excel, limpar_temp
 
 log = logging.getLogger(__name__)
 
@@ -92,12 +99,15 @@ def _find_arquivo_prefixado(subpasta_path: str, prefixo_arquivo: str) -> str:
     candidatos = []
     for entry in os.listdir(subpasta_path):
         ext = entry.lower()
-        if (ext.endswith(".xlsm") or ext.endswith(".xlsx")) and entry.upper().startswith(prefixo_up):
+        if (not eh_arquivo_trava_excel(entry)
+                and (ext.endswith(".xlsm") or ext.endswith(".xlsx"))
+                and entry.upper().startswith(prefixo_up)):
             candidatos.append(os.path.join(subpasta_path, entry))
     if not candidatos:
+        existentes = [e for e in os.listdir(subpasta_path) if not eh_arquivo_trava_excel(e)]
         log.warning(
             f"[busca] FALHA: nenhum '{prefixo_up}*.xls[mx]' em {subpasta_path}. "
-            f"Arquivos existentes: {os.listdir(subpasta_path)}"
+            f"Arquivos existentes: {existentes}"
         )
         raise FileNotFoundError(
             f"Nenhum arquivo '{prefixo_up}*.xls[mx]' encontrado em: {subpasta_path}"
@@ -119,12 +129,13 @@ def _find_arquivo_mais_recente(subpasta_path: str) -> str:
     candidatos = []
     for entry in os.listdir(subpasta_path):
         ext = entry.lower()
-        if ext.endswith(".xlsm") or ext.endswith(".xlsx"):
+        if not eh_arquivo_trava_excel(entry) and (ext.endswith(".xlsm") or ext.endswith(".xlsx")):
             candidatos.append(os.path.join(subpasta_path, entry))
     if not candidatos:
+        existentes = [e for e in os.listdir(subpasta_path) if not eh_arquivo_trava_excel(e)]
         log.warning(
             f"[busca] FALHA: nenhuma planilha .xlsm/.xlsx em {subpasta_path}. "
-            f"Arquivos existentes: {os.listdir(subpasta_path)}"
+            f"Arquivos existentes: {existentes}"
         )
         raise FileNotFoundError(f"Nenhuma planilha .xlsm/.xlsx encontrada em: {subpasta_path}")
     candidatos.sort(key=os.path.getmtime, reverse=True)
@@ -559,7 +570,6 @@ def _tentar_ler_arquivo(xlsm: str, eh_entrega: bool, config):
     Retorna None se a folha obrigatoria nao existir neste arquivo — sinal
     para o chamador tentar a subpasta padrao.
     """
-    from openpyxl import load_workbook
     log.info(
         f"[levantamento] Lendo {os.path.basename(xlsm)}"
         + (" (entrega)" if eh_entrega else "")
@@ -567,12 +577,9 @@ def _tentar_ler_arquivo(xlsm: str, eh_entrega: bool, config):
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UserWarning)
         try:
-            wb = load_workbook(xlsm, read_only=True, data_only=True, keep_vba=False)
+            wb, tmp = abrir_workbook_somente_leitura(xlsm)
         except PermissionError:
-            raise PermissionError(
-                f"Arquivo bloqueado: {os.path.basename(xlsm)}\n"
-                "Feche o Excel ou aguarde o OneDrive sincronizar."
-            )
+            raise
         except Exception as e:
             raise RuntimeError(f"Erro ao abrir planilha: {e}")
 
@@ -580,6 +587,20 @@ def _tentar_ler_arquivo(xlsm: str, eh_entrega: bool, config):
             return _montar_categorias(wb, config, eh_entrega)
         finally:
             wb.close()
+            limpar_temp(tmp)
+
+
+def _ler_cache(cache_path: str, slug: str):
+    """Le o cache bruto do disco (dict) ou None se nao existir/for invalido.
+    Nao valida schema/mtime/arquivo — quem chama decide o que fazer."""
+    if not os.path.exists(cache_path):
+        return None
+    try:
+        with open(cache_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        log.warning(f"[cache-lev] Erro lendo cache {slug}: {e}")
+        return None
 
 
 def carregar_levantamento(config, nome_municipio: str, bases=None):
@@ -594,6 +615,11 @@ def carregar_levantamento(config, nome_municipio: str, bases=None):
     subpasta padrao (auditoria) — ver _resolver_arquivo_em_bases. Se a
     entrega existir mas nao tiver a folha obrigatoria, cai para a subpasta
     padrao na mesma base (a "categorias" fica vazia nesse caso).
+
+    Se a planilha existir mas nao puder ser lida (Excel/OneDrive segurando a
+    trava mesmo apos a tentativa de copia temporaria — ver excel_util), o
+    ultimo cache valido para este municipio e servido no lugar, com
+    "stale": True, em vez de propagar o erro.
     """
     cache_dir  = config.LEVANTAMENTOS_CACHE_DIR
     slug       = _slug(nome_municipio)
@@ -606,46 +632,57 @@ def carregar_levantamento(config, nome_municipio: str, bases=None):
     mtime = os.path.getmtime(xlsm)
 
     # Tenta cache
-    if os.path.exists(cache_path):
-        try:
-            with open(cache_path, "r", encoding="utf-8") as f:
-                cache = json.load(f)
-            if (cache.get("schema") == CACHE_SCHEMA
-                    and cache.get("mtime") == mtime
-                    and cache.get("arquivo") == xlsm):
-                log.info(
-                    f"[cache-lev] Hit {slug} - {cache.get('total_pontos', '?')} pontos "
-                    f"({cache.get('gerado_em', '?')})"
-                )
-                return {
-                    "pontos":     cache["dados"],
-                    "categorias": cache.get("categorias", []),
-                    "entrega":    cache.get("entrega", False),
-                }
-            log.info(f"[cache-lev] Invalidado {slug} (mtime/arquivo/schema mudou)")
-        except Exception as e:
-            log.warning(f"[cache-lev] Erro lendo cache {slug}: {e}")
-
-    resultado = _tentar_ler_arquivo(xlsm, eh_entrega, config)
-
-    if resultado is None:
-        if not eh_entrega:
-            raise ValueError(
-                f"Folha obrigatoria '{config.LEVANTAMENTO_ABA}' nao encontrada em "
-                f"{os.path.basename(xlsm)}"
-            )
-        log.warning(
-            f"[levantamento] Entrega ({os.path.basename(xlsm)}) sem a folha obrigatoria "
-            f"'{config.LEVANTAMENTO_ABA}' — tentando subpasta padrao"
+    cache = _ler_cache(cache_path, slug)
+    if (cache and cache.get("schema") == CACHE_SCHEMA
+            and cache.get("mtime") == mtime and cache.get("arquivo") == xlsm):
+        log.info(
+            f"[cache-lev] Hit {slug} - {cache.get('total_pontos', '?')} pontos "
+            f"({cache.get('gerado_em', '?')})"
         )
-        xlsm, eh_entrega = _resolver_arquivo_em_bases(bases, nome_municipio, config, somente_padrao=True)
-        mtime = os.path.getmtime(xlsm)
+        return {
+            "pontos":     cache["dados"],
+            "categorias": cache.get("categorias", []),
+            "entrega":    cache.get("entrega", False),
+            "stale":      False,
+        }
+    if cache:
+        log.info(f"[cache-lev] Invalidado {slug} (mtime/arquivo/schema mudou)")
+
+    try:
         resultado = _tentar_ler_arquivo(xlsm, eh_entrega, config)
+
         if resultado is None:
-            raise ValueError(
-                f"Folha obrigatoria '{config.LEVANTAMENTO_ABA}' nao encontrada em "
-                f"{os.path.basename(xlsm)}"
+            if not eh_entrega:
+                raise ValueError(
+                    f"Folha obrigatoria '{config.LEVANTAMENTO_ABA}' nao encontrada em "
+                    f"{os.path.basename(xlsm)}"
+                )
+            log.warning(
+                f"[levantamento] Entrega ({os.path.basename(xlsm)}) sem a folha obrigatoria "
+                f"'{config.LEVANTAMENTO_ABA}' — tentando subpasta padrao"
             )
+            xlsm, eh_entrega = _resolver_arquivo_em_bases(bases, nome_municipio, config, somente_padrao=True)
+            mtime = os.path.getmtime(xlsm)
+            resultado = _tentar_ler_arquivo(xlsm, eh_entrega, config)
+            if resultado is None:
+                raise ValueError(
+                    f"Folha obrigatoria '{config.LEVANTAMENTO_ABA}' nao encontrada em "
+                    f"{os.path.basename(xlsm)}"
+                )
+    except PermissionError:
+        if not cache or cache.get("schema") != CACHE_SCHEMA:
+            raise
+        log.warning(
+            f"[cache-lev] Planilha em uso — servindo ultimo cache de {slug} "
+            f"({cache.get('gerado_em', '?')})"
+        )
+        return {
+            "pontos":     cache["dados"],
+            "categorias": cache.get("categorias", []),
+            "entrega":    cache.get("entrega", False),
+            "stale":      True,
+            "gerado_em":  cache.get("gerado_em"),
+        }
 
     pontos, categorias = resultado
     log.info(f"[levantamento] {len(pontos)} pontos validos em {slug}")
@@ -670,4 +707,4 @@ def carregar_levantamento(config, nome_municipio: str, bases=None):
     except Exception as e:
         log.warning(f"[cache-lev] Nao foi possivel salvar cache {slug}: {e}")
 
-    return {"pontos": pontos, "categorias": categorias, "entrega": eh_entrega}
+    return {"pontos": pontos, "categorias": categorias, "entrega": eh_entrega, "stale": False}
