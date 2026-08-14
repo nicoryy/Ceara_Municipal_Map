@@ -196,3 +196,22 @@ TRANSFORMADORES_CACHE_DIR = "../data/cache_transformadores"
 AREAS_INACESSIVEIS_BASE_PATH = _caminho_opcional("AREAS_INACESSIVEIS_BASE_PATH")
 AREAS_INACESSIVEIS_SUB       = _env_opcional("AREAS_INACESSIVEIS_SUBPASTA")
 AREAS_INACESSIVEIS_CACHE_DIR = "../data/cache_areas_inacessiveis"
+
+# =============================================================================
+# DUPLICADAS - deteccao de pontos duplicados (porte do script QGIS)
+# =============================================================================
+# Raio (metros) usado no agrupamento por proximidade — mesmo valor do
+# script QGIS original (detectar_pontos_proximos(raio_metros=10.0)).
+DUPLICADAS_RAIO_METROS = 10.0
+
+# =============================================================================
+# GALERIA DE FOTOS - extracao de fotos de camera a partir do LINK_RELATORIO
+# =============================================================================
+# Diretorio onde o cache por municipio (link -> fotos) e gravado.
+FOTOS_CACHE_DIR = "../data/cache_fotos"
+
+# Requisicoes a paginas de relatorio (LINK_RELATORIO) sao feitas em lotes,
+# nao tudo de uma vez — protege o servidor de relatorios do rate limit dele
+# (confirmado na pratica: sem essa pausa, ele passa a rejeitar requisicoes).
+GALERIA_MAX_WORKERS = 7                        # requisicoes simultaneas por lote
+GALERIA_DELAY_ENTRE_LOTES_SEGUNDOS = 0.25      # pausa entre um lote e o proximo

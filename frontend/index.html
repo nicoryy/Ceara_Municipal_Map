@@ -974,14 +974,24 @@
       flex-shrink: 0;
     }
 
-    /* ── painel lateral ── */
+    /* ── painel lateral ──
+       overflow-y:auto no proprio #painel (em vez de so no #card-municipio)
+       — em telas baixas, Status+Ano+Tipo+Trafos sozinhos podem nao deixar
+       espaco nenhum pro resto; com isso o painel inteiro rola e nada fica
+       inalcancavel (ex.: lista de trafos cortada sem jeito de rolar ate
+       ela). Em telas normais nao muda nada, ja que o conteudo cabe sem
+       precisar rolar. */
     #painel {
       width: var(--panel-w);
       background: var(--surface);
       border-left: 1px solid var(--border);
       display: flex;
       flex-direction: column;
-      overflow: hidden;
+      overflow-y: auto;
+      overflow-x: hidden;
+      flex-shrink: 0;
+    }
+    #painel > * {
       flex-shrink: 0;
     }
 
@@ -1075,7 +1085,7 @@
     }
     #kml-trafos-lista {
       padding: 8px 12px 10px;
-      max-height: 240px;
+      max-height: min(240px, 30vh);
       overflow-y: auto;
     }
     .kml-trafo-item {
@@ -1127,11 +1137,60 @@
       text-decoration: underline;
     }
 
-    /* ── card município ── */
+    /* ── cabeçalho fixo do município selecionado (nome/ibge/status + ações)
+       position:sticky em vez de fixo de verdade: como #painel inteiro rola
+       (ver acima), isso mantém nome/status/botões visíveis mesmo rolando
+       por uma lista longa de campos de um ponto do levantamento. ── */
+    #painel-fixo {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      background: var(--surface);
+    }
+
+    /* ── card município (cabeçalho: nome/ibge/status ou placeholder) ── */
+    #card-municipio-head {
+      padding: 16px 16px 12px;
+    }
+
+    /* ── ações do município selecionado (Duplicadas / Galeria) ── */
+    #painel-acoes {
+      display: flex;
+      gap: 8px;
+      padding: 0 16px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    #painel-acoes button {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-size: 12px;
+      padding: 7px 8px;
+      cursor: pointer;
+      transition: border-color .2s, color .2s, opacity .2s;
+      white-space: nowrap;
+    }
+    #painel-acoes button:not(:disabled):hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    #painel-acoes button:disabled {
+      opacity: .45;
+      cursor: default;
+    }
+    #painel-acoes button.loading .ri {
+      animation: spin .6s linear infinite;
+    }
+
+    /* ── card município (conteúdo: detalhes do ponto selecionado) ── */
     #card-municipio {
       padding: 16px;
-      flex: 1;
-      overflow-y: auto;
     }
 
     .placeholder {
@@ -1204,6 +1263,173 @@
 
     .dot-err {
       color: #E24B4A;
+    }
+
+    /* ── modal da galeria de fotos ── */
+    .modal-card-galeria {
+      max-width: 1100px;
+      width: 92vw;
+      max-height: 88vh;
+      display: flex;
+      flex-direction: column;
+      padding: 18px 20px;
+    }
+    .modal-galeria-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+      flex-shrink: 0;
+    }
+    .modal-galeria-fechar {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: var(--radius);
+      width: 30px;
+      height: 30px;
+      flex-shrink: 0;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .modal-galeria-fechar:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    /* ── mini cabeçalho fixo de páginas — não rola junto com o grid;
+       overflow-x horizontal quando não couberem todos os números ── */
+    .galeria-paginas {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding-bottom: 12px;
+      flex-shrink: 0;
+    }
+    .galeria-pagina-btn {
+      flex-shrink: 0;
+      min-width: 32px;
+      padding: 6px 10px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      font-size: 12px;
+      cursor: pointer;
+      text-align: center;
+    }
+    .galeria-pagina-btn:hover:not(.ativo) {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .galeria-pagina-btn.ativo {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      cursor: default;
+    }
+    .modal-galeria-corpo {
+      overflow-y: auto;
+      flex: 1;
+      min-height: 0;
+    }
+    .galeria-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 10px;
+    }
+    .galeria-item {
+      position: relative;
+      aspect-ratio: 1;
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+    }
+    .galeria-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .galeria-item-abrir {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(15,17,23,.72);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      text-decoration: none;
+      line-height: 1;
+    }
+    .galeria-item-abrir:hover {
+      background: var(--accent);
+    }
+    .galeria-vazio {
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+      padding: 40px 0;
+    }
+    .galeria-status {
+      color: var(--muted);
+      font-size: 12px;
+      text-align: center;
+      padding: 14px 0 4px;
+    }
+    .galeria-status:empty {
+      display: none;
+    }
+
+    /* ── responsividade ──
+       O arquivo nao tinha nenhuma @media ate aqui — painel lateral e
+       galeria eram fixos, sem adaptacao a tela pequena/baixa. */
+    @media (max-width: 900px) {
+      .main {
+        flex-direction: column;
+      }
+      #painel {
+        width: 100%;
+        max-height: 45vh;
+        border-left: none;
+        border-top: 1px solid var(--border);
+      }
+      .galeria-grid {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+    @media (max-width: 800px) {
+      .modal-card-galeria {
+        width: 96vw;
+      }
+      .galeria-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+    @media (max-width: 520px) {
+      .galeria-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    @media (max-height: 700px) {
+      .painel-titulo {
+        padding: 10px 16px 6px;
+      }
+      #card-municipio-head {
+        padding: 12px 16px 8px;
+      }
+      #card-municipio {
+        padding: 12px 16px;
+      }
     }
   </style>
 </head>
@@ -1304,12 +1530,24 @@
         <div id="kml-trafos-lista"></div>
       </div>
 
-      <div id="card-municipio">
-        <div class="placeholder">
-          <em>🗺️</em>
-          Clique em um município<br>para ver detalhes
+      <div id="painel-fixo">
+        <div id="card-municipio-head">
+          <div class="placeholder">
+            <em>🗺️</em>
+            Clique em um município<br>para ver detalhes
+          </div>
+        </div>
+        <div id="painel-acoes">
+          <button id="btn-duplicadas" disabled title="Selecione um município para habilitar">
+            <span class="ri">⧉</span> Duplicadas
+          </button>
+          <button id="btn-galeria" disabled title="Disponível dentro do levantamento, com algum filtro ativo">
+            <span class="ri">▦</span> Galeria
+          </button>
         </div>
       </div>
+
+      <div id="card-municipio"></div>
     </div>
   </div>
 
@@ -1330,6 +1568,21 @@
       <div class="modal-buttons">
         <button class="btn-cancel" id="modal-cancel">Cancelar</button>
         <button class="btn-confirm" id="modal-confirm">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal da galeria de fotos de câmera (pontos do filtro atual do levantamento) -->
+  <div class="modal-overlay" id="modal-galeria">
+    <div class="modal-card modal-card-galeria">
+      <div class="modal-galeria-header">
+        <div class="modal-title" id="galeria-titulo">Galeria</div>
+        <button class="modal-galeria-fechar" id="galeria-fechar" title="Fechar">✕</button>
+      </div>
+      <div class="galeria-paginas" id="galeria-paginas"></div>
+      <div class="modal-galeria-corpo" id="galeria-corpo">
+        <div class="galeria-grid" id="galeria-grid"></div>
+        <div class="galeria-status" id="galeria-status"></div>
       </div>
     </div>
   </div>
@@ -1818,7 +2071,9 @@
         html += `<div style="margin-top:8px;font-size:12px;color:var(--muted)">Tipo: <span style="color:var(--text)">${tipo}</span></div>`;
       }
 
-      document.getElementById("card-municipio").innerHTML = html;
+      document.getElementById("card-municipio-head").innerHTML = html;
+      document.getElementById("card-municipio").innerHTML = "";
+      atualizarBotaoDuplicadas(true);
 
       currentLevantamentoKey = chave;
       currentMunicipioNome   = chave;
@@ -2090,11 +2345,30 @@
         html += `<div class="sem-dado">Sem dado na planilha</div>`;
       }
 
-      document.getElementById("card-municipio").innerHTML = html;
+      document.getElementById("card-municipio-head").innerHTML = html;
+      document.getElementById("card-municipio").innerHTML = "";
+      atualizarBotaoDuplicadas(true);
 
       currentLevantamentoKey = String(ibge);
       currentMunicipioNome   = nome;
       document.getElementById("btn-levantamento").disabled = false;
+    }
+
+    // Habilita/desabilita o botão "Duplicadas" — fica disponível assim que
+    // há um município/regional selecionado (dentro ou fora do levantamento),
+    // já que a detecção lê os dados do levantamento por conta própria.
+    function atualizarBotaoDuplicadas(habilitado) {
+      const btn = document.getElementById("btn-duplicadas");
+      btn.disabled = !habilitado;
+      btn.title = habilitado ? "" : "Selecione um município para habilitar";
+    }
+
+    // Habilita/desabilita o botão "Galeria" — só faz sentido dentro do
+    // modo levantamento, com pontos filtrados e LINK_RELATORIO disponível.
+    function atualizarBotaoGaleria(habilitado) {
+      const btn = document.getElementById("btn-galeria");
+      btn.disabled = !habilitado;
+      btn.title = habilitado ? "" : "Disponível dentro do levantamento, com algum filtro ativo";
     }
 
     // ════════════════════════════════════════════════════════════
@@ -2475,6 +2749,7 @@
         // habilita o filtro geral (so faz sentido dentro do levantamento)
         resetFiltroGeral(true);
         configurarRangeData(json.pontos || []);
+        atualizarBotaoGaleria(true);
       } catch (e) {
         levantamentoMode = false;  // desfaz o "entrou" parcial em caso de erro
         console.error("Erro ao carregar levantamento:", e);
@@ -3845,6 +4120,7 @@
       document.getElementById("btn-exit-levantamento").classList.remove("show");
       document.getElementById("btn-levantamento").classList.remove("ativo");
       levantamentoMode = false;
+      atualizarBotaoGaleria(false);
 
       // Restaura o card do município selecionado, se ainda houver
       if (selectedLayer) {
@@ -3856,9 +4132,263 @@
           selecionarRegional(currentLevantamentoKey, selectedLayer);
         }
       } else {
-        document.getElementById("card-municipio").innerHTML =
+        document.getElementById("card-municipio-head").innerHTML =
           `<div class="placeholder"><em>🗺️</em>Clique em um município<br>para ver detalhes</div>`;
+        document.getElementById("card-municipio").innerHTML = "";
+        atualizarBotaoDuplicadas(false);
       }
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // DUPLICADAS — deteccao de pontos duplicados (porte do script QGIS,
+    // roda em segundo plano no backend — ver backend/duplicadas.py).
+    // O job e atomico (nao ha progresso incremental, so "pronto"/"nao"),
+    // entao so fazemos polling ate concluido/erro e baixamos o xlsx.
+    // ════════════════════════════════════════════════════════════
+    async function iniciarDuplicadas() {
+      if (!currentLevantamentoKey) return;
+      const btn = document.getElementById("btn-duplicadas");
+      btn.disabled = true;
+      btn.classList.add("loading");
+      mostrarAviso(`Procurando duplicadas em ${currentMunicipioNome}…`);
+      try {
+        const r = await fetch(`${API}/duplicadas/${encodeURIComponent(currentLevantamentoKey)}`, { method: "POST" });
+        if (!r.ok) {
+          const erro = await r.json().catch(() => ({ erro: r.statusText }));
+          throw new Error(erro.erro || `HTTP ${r.status}`);
+        }
+        const { job_id } = await r.json();
+        await pollDuplicadas(job_id);
+      } catch (e) {
+        console.error("Erro ao buscar duplicadas:", e);
+        alert("Erro ao buscar duplicadas: " + e.message);
+      } finally {
+        btn.classList.remove("loading");
+        btn.disabled = !currentLevantamentoKey;
+      }
+    }
+
+    function pollDuplicadas(jobId) {
+      return new Promise((resolve, reject) => {
+        const tick = async () => {
+          try {
+            const r = await fetch(`${API}/duplicadas/progresso/${jobId}`);
+            const j = await r.json();
+            if (j.estado === "concluido") {
+              mostrarAviso(`${j.total_clusters} clusters de duplicadas encontrados (${j.total_pontos} pontos) — baixando…`);
+              const a = document.createElement("a");
+              a.href = `${API}/duplicadas/download/${jobId}`;
+              a.download = "";
+              document.body.appendChild(a);
+              a.click();
+              a.remove();
+              resolve();
+            } else if (j.estado === "erro") {
+              throw new Error(j.erro || "Falha ao buscar duplicadas");
+            } else {
+              setTimeout(tick, 700);
+            }
+          } catch (e) {
+            reject(e);
+          }
+        };
+        tick();
+      });
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // GALERIA — fotos de câmera dos pontos do filtro atual do levantamento,
+    // extraídas server-side do LINK_RELATORIO (ver backend/fotos_reader.py).
+    // Reusa pontosVisiveisParaExport() — mesma lista que já alimenta o KML
+    // de export, então respeita filtro geral + filtro de data + categorias.
+    //
+    // Paginação real (não cumulativa): o grid mostra só os 60 itens da
+    // página atual — trocar de página troca o conteúdo do DOM, nunca
+    // acumula (evita centenas de <img> simultâneas travando a aba). O
+    // backend só busca fotos o suficiente pra cobrir a página atual + a
+    // seguinte (ver POST /galeria/liberar/<job_id> em server.py); o resto
+    // do filtro fica parado até o usuário avançar mais uma página.
+    // ════════════════════════════════════════════════════════════
+    let galeriaFotos       = [];
+    let galeriaPagina      = 0;       // pagina atual, 0-indexed
+    let galeriaEmAndamento = false;   // true enquanto o job ainda esta buscando (nao "concluido")
+    let galeriaJobId       = null;
+    let galeriaAlvoFotos   = 0;       // ultimo alvo_fotos ja solicitado ao backend
+    const GALERIA_POR_PAGINA = 30;   // 6 colunas x 10 linhas
+
+    function pontosParaGaleria() {
+      return pontosVisiveisParaExport()
+        .filter(p => p.LINK_RELATORIO)
+        .map(p => ({ id_ponto: p.ID_PONTO || "", link: p.LINK_RELATORIO }));
+    }
+
+    async function abrirGaleria() {
+      if (!levantamentoMode || !currentLevantamentoKey) return;
+      const pontos = pontosParaGaleria();
+      if (pontos.length === 0) {
+        alert("Nenhum ponto do filtro atual tem LINK_RELATORIO.");
+        return;
+      }
+
+      const btn = document.getElementById("btn-galeria");
+      btn.disabled = true;
+      btn.classList.add("loading");
+      // Abre o modal na hora, com a grade em estado "buscando" — as fotos
+      // vao aparecendo aos poucos conforme o backend processa em lotes.
+      abrirModalGaleria();
+      galeriaAlvoFotos = 2 * GALERIA_POR_PAGINA;   // pagina 1 + 2, ver plano
+      try {
+        const r = await fetch(`${API}/galeria/iniciar`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ municipio: currentLevantamentoKey, pontos, alvo_fotos: galeriaAlvoFotos }),
+        });
+        if (!r.ok) {
+          const erro = await r.json().catch(() => ({ erro: r.statusText }));
+          throw new Error(erro.erro || `HTTP ${r.status}`);
+        }
+        const { job_id } = await r.json();
+        galeriaJobId = job_id;
+        // Nao espera o job terminar (pode ficar pausado por minutos
+        // esperando o usuario avancar de pagina) — so dispara o polling em
+        // segundo plano; o botao volta ao normal assim que o job existe.
+        iniciarPollingGaleria(job_id);
+      } catch (e) {
+        console.error("Erro ao buscar fotos:", e);
+        galeriaEmAndamento = false;
+        renderizarGaleria();
+        alert("Erro ao buscar fotos: " + e.message);
+      } finally {
+        btn.classList.remove("loading");
+        btn.disabled = !(levantamentoMode && currentLevantamentoKey);
+      }
+    }
+
+    // Polling em segundo plano (não é uma Promise aguardada) — para
+    // sozinho quando o job termina/erra ou quando o modal é fechado.
+    function iniciarPollingGaleria(jobId) {
+      const tick = async () => {
+        if (!document.getElementById("modal-galeria").classList.contains("show")) return;
+        try {
+          const r = await fetch(`${API}/galeria/progresso/${jobId}`);
+          const j = await r.json();
+          if (j.estado === "erro") {
+            console.error("Erro ao buscar fotos:", j.erro);
+            galeriaEmAndamento = false;
+            renderizarGaleria();
+            return;
+          }
+          galeriaFotos       = j.fotos || [];
+          galeriaEmAndamento = j.estado !== "concluido";
+          atualizarTituloGaleria(j);
+          renderizarPaginasGaleria();
+          renderizarGaleria();
+          if (j.estado !== "concluido") setTimeout(tick, 400);
+        } catch (e) {
+          console.error("Erro ao acompanhar galeria:", e);
+        }
+      };
+      tick();
+    }
+
+    function atualizarTituloGaleria(progresso) {
+      const n = galeriaFotos.length;
+      let sufixo = `${n} foto${n === 1 ? "" : "s"}`;
+      if (progresso && progresso.estado === "executando") {
+        sufixo += ` · buscando… ${progresso.feito}/${progresso.total} pontos`;
+      }
+      document.getElementById("galeria-titulo").textContent =
+        `Galeria — ${currentMunicipioNome || ""} · ${sufixo}`;
+    }
+
+    function abrirModalGaleria() {
+      galeriaFotos       = [];
+      galeriaPagina      = 0;
+      galeriaEmAndamento = true;
+      galeriaJobId       = null;
+      galeriaAlvoFotos   = 0;
+      document.getElementById("galeria-titulo").textContent = `Galeria — ${currentMunicipioNome || ""}`;
+      renderizarPaginasGaleria();
+      renderizarGaleria();
+      document.getElementById("modal-galeria").classList.add("show");
+    }
+
+    function fecharModalGaleria() {
+      document.getElementById("modal-galeria").classList.remove("show");
+    }
+
+    // Vai pra uma página já revelada e pede ao backend pra liberar o
+    // suficiente pra cobrir essa página + a seguinte (ver liberarProximaPaginaGaleria).
+    function irParaPaginaGaleria(pagina) {
+      galeriaPagina = pagina;
+      renderizarPaginasGaleria();
+      renderizarGaleria();
+      liberarProximaPaginaGaleria();
+    }
+
+    function liberarProximaPaginaGaleria() {
+      if (!galeriaJobId) return;
+      const alvo = (galeriaPagina + 2) * GALERIA_POR_PAGINA;   // pagina atual + a seguinte
+      if (alvo <= galeriaAlvoFotos) return;
+      galeriaAlvoFotos = alvo;
+      fetch(`${API}/galeria/liberar/${galeriaJobId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ alvo_fotos: alvo }),
+      }).catch(e => console.error("Erro ao liberar mais fotos:", e));
+    }
+
+    // Mini cabeçalho fixo com um botão por página já revelada (tem pelo
+    // menos 1 foto) — overflow-x horizontal quando não couberem todas.
+    function renderizarPaginasGaleria() {
+      const wrap = document.getElementById("galeria-paginas");
+      const totalPaginas = Math.max(1, Math.ceil(galeriaFotos.length / GALERIA_POR_PAGINA));
+      wrap.innerHTML = "";
+      for (let i = 0; i < totalPaginas; i++) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "galeria-pagina-btn" + (i === galeriaPagina ? " ativo" : "");
+        btn.textContent = String(i + 1);
+        btn.addEventListener("click", () => irParaPaginaGaleria(i));
+        wrap.appendChild(btn);
+      }
+    }
+
+    function renderizarGaleria() {
+      const grid   = document.getElementById("galeria-grid");
+      const status = document.getElementById("galeria-status");
+
+      if (galeriaFotos.length === 0) {
+        grid.innerHTML = galeriaEmAndamento
+          ? `<div class="galeria-vazio">Buscando fotos…</div>`
+          : `<div class="galeria-vazio">Nenhuma foto de câmera encontrada para os pontos do filtro atual.</div>`;
+        status.textContent = "";
+        return;
+      }
+
+      const inicio  = galeriaPagina * GALERIA_POR_PAGINA;
+      const visivel = galeriaFotos.slice(inicio, inicio + GALERIA_POR_PAGINA);
+
+      grid.innerHTML = visivel.map(f => {
+        const titulo = [
+          f.id_ponto ? `Ponto ${f.id_ponto}` : "",
+          f.tecnico  ? `Técnico: ${f.tecnico}` : "",
+          f.pos_id   ? `POS_ID: ${f.pos_id}` : "",
+          f.upload   ? `Upload: ${f.upload}` : "",
+          f.captura  ? `Captura: ${f.captura}` : "",
+        ].filter(Boolean).join(" · ");
+        return `
+      <div class="galeria-item" title="${escapeHtml(titulo)}">
+        <img src="${escapeHtml(f.url)}" loading="lazy" alt="${escapeHtml(titulo)}">
+        <a class="galeria-item-abrir" href="${escapeHtml(f.url)}" target="_blank" rel="noopener" title="Abrir em nova aba">⧉</a>
+      </div>`;
+      }).join("");
+
+      // Nota discreta quando a pagina atual ainda nao esta completa e o
+      // job continua buscando — o grid vai preenchendo sozinho via polling.
+      status.textContent = (galeriaEmAndamento && visivel.length < GALERIA_POR_PAGINA)
+        ? "Buscando mais fotos desta página…"
+        : "";
     }
 
     // Fecha spiderfy e esconde o tooltip compartilhado (posição ficaria
@@ -3885,6 +4415,8 @@
       if (e.key === "Escape") {
         const overlay = document.getElementById("modal-confirma");
         if (overlay.classList.contains("show")) fecharModal();
+        const overlayGaleria = document.getElementById("modal-galeria");
+        if (overlayGaleria.classList.contains("show")) fecharModalGaleria();
       }
     });
     document.getElementById("btn-exit-levantamento").addEventListener("click", sairLevantamento);
@@ -3893,6 +4425,14 @@
     document.getElementById("btn-download").addEventListener("click", exportarDados);
     document.getElementById("btn-maptype").addEventListener("click", cicloMapType);
     document.getElementById("data-range").addEventListener("input", onDataRangeInput);
+
+    // Duplicadas / Galeria
+    document.getElementById("btn-duplicadas").addEventListener("click", iniciarDuplicadas);
+    document.getElementById("btn-galeria").addEventListener("click", abrirGaleria);
+    document.getElementById("galeria-fechar").addEventListener("click", fecharModalGaleria);
+    document.getElementById("modal-galeria").addEventListener("click", (e) => {
+      if (e.target.id === "modal-galeria") fecharModalGaleria();
+    });
 
     // Filtro geral de pontos
     document.getElementById("filtro-geral").addEventListener("input", onFiltroGeralInput);

@@ -14,6 +14,9 @@ import os
 import io
 import json
 import re
+import threading
+import time
+import uuid
 import zipfile
 import logging
 from datetime import datetime
@@ -27,6 +30,9 @@ from planilha_reader import carregar_dados
 from levantamento_reader import carregar_levantamento
 from transformadores_reader import carregar_transformadores
 from areas_inacessiveis_reader import carregar_areas_inacessiveis
+from duplicadas import detectar_duplicadas, exportar_xlsx, nome_arquivo_duplicados
+from geometria_util import geometria_para
+from fotos_reader import buscar_fotos_camera
 
 logging.basicConfig(
     level=logging.INFO,
@@ -99,6 +105,64 @@ def _resolver_nome(key: str) -> str:
             raise FileNotFoundError(f"IBGE {ibge} nao encontrado no GeoJSON.")
         return nome
     return k
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Job runner em memoria — usado por /duplicadas e /galeria, que rodam em
+# segundo plano (threading.Thread) pra nao bloquear o Flask dev server
+# (que ja roda threaded, entao requests concorrentes continuam respondendo
+# enquanto um job roda). Jobs somem sozinhos apos _JOB_TTL_SEGUNDOS.
+# ─────────────────────────────────────────────────────────────────────────────
+
+_jobs = {}
+_jobs_lock = threading.Lock()
+_JOB_TTL_SEGUNDOS = 3600
+
+
+def _criar_job(tipo: str, total: int = 0) -> str:
+    agora = time.time()
+    with _jobs_lock:
+        expirados = [jid for jid, j in _jobs.items() if agora - j["criado_em"] > _JOB_TTL_SEGUNDOS]
+        for jid in expirados:
+            del _jobs[jid]
+        job_id = uuid.uuid4().hex[:12]
+        _jobs[job_id] = {
+            "tipo": tipo, "estado": "executando", "feito": 0, "total": total,
+            "erro": None, "resultado": None, "fotos": [], "alvo_fotos": 0, "criado_em": agora,
+        }
+    return job_id
+
+
+def _atualizar_job(job_id: str, **kwargs):
+    with _jobs_lock:
+        if job_id in _jobs:
+            _jobs[job_id].update(kwargs)
+
+
+def _registrar_progresso_fotos(job_id: str, feito: int, total: int, novas_fotos: list):
+    """Callback de progresso da galeria (ver fotos_reader.buscar_fotos_camera) —
+    vai acumulando o resultado parcial no job pra permitir carregamento
+    progressivo no frontend, sem esperar o job inteiro terminar."""
+    with _jobs_lock:
+        job = _jobs.get(job_id)
+        if job:
+            job["feito"] = feito
+            job["total"] = total
+            job["fotos"].extend(novas_fotos)
+
+
+def _obter_job(job_id: str):
+    with _jobs_lock:
+        job = _jobs.get(job_id)
+        if not job:
+            return None
+        copia = dict(job)
+        # "fotos" e uma lista mutavel que o thread do job pode continuar
+        # alterando (.extend) depois desta copia — copiar tambem a lista,
+        # senao um poll concorrente serializa ela num estado inconsistente.
+        if isinstance(copia.get("fotos"), list):
+            copia["fotos"] = list(copia["fotos"])
+        return copia
 
 
 def _bases_levantamento_ordenadas() -> list:
@@ -247,6 +311,163 @@ def levantamento(key):
     except Exception as e:
         log.error(f"[levantamento] 500 ({key}): {e}")
         return jsonify({"erro": str(e)}), 500
+
+
+@app.route("/duplicadas/<path:key>", methods=["POST"])
+def duplicadas_iniciar(key):
+    """Inicia em segundo plano a deteccao de duplicadas (porte do script
+    QGIS — ver backend/duplicadas.py) e devolve um job_id pra acompanhar o
+    progresso em /duplicadas/progresso/<job_id> e baixar o resultado em
+    /duplicadas/download/<job_id>."""
+    try:
+        nome = _resolver_nome(key)
+    except FileNotFoundError as e:
+        return jsonify({"erro": str(e)}), 404
+
+    job_id = _criar_job("duplicadas", total=1)
+
+    def _run():
+        try:
+            bases = _bases_levantamento_ordenadas()
+            resultado_lev = carregar_levantamento(config, nome, bases=bases)
+            pontos = resultado_lev["pontos"]
+            geometria = geometria_para(key, nome)
+            resultado = detectar_duplicadas(
+                pontos, geometria=geometria, raio_metros=config.DUPLICADAS_RAIO_METROS
+            )
+            buf = exportar_xlsx(resultado, config.COLUNAS_LEVANTAMENTO)
+            _atualizar_job(job_id, estado="concluido", feito=1, resultado={
+                "arquivo":        nome_arquivo_duplicados(nome),
+                "bytes":          buf.getvalue(),
+                "total_clusters": len(resultado["clusters"]),
+                "total_pontos":   sum(len(c["pontos"]) for c in resultado["clusters"]),
+                "excluidos_fora_limite": resultado["excluidos_fora_limite"],
+            })
+        except Exception as e:
+            log.error(f"[duplicadas] job {job_id} falhou: {e}")
+            _atualizar_job(job_id, estado="erro", erro=str(e))
+
+    threading.Thread(target=_run, daemon=True).start()
+    return jsonify({"job_id": job_id, "municipio": nome})
+
+
+@app.route("/duplicadas/progresso/<job_id>")
+def duplicadas_progresso(job_id):
+    job = _obter_job(job_id)
+    if not job or job["tipo"] != "duplicadas":
+        return jsonify({"erro": "Job nao encontrado"}), 404
+    resp = {"estado": job["estado"], "feito": job["feito"], "total": job["total"], "erro": job["erro"]}
+    if job["estado"] == "concluido":
+        r = job["resultado"]
+        resp["total_clusters"] = r["total_clusters"]
+        resp["total_pontos"]   = r["total_pontos"]
+    return jsonify(resp)
+
+
+@app.route("/duplicadas/download/<job_id>")
+def duplicadas_download(job_id):
+    job = _obter_job(job_id)
+    if not job or job["tipo"] != "duplicadas" or job["estado"] != "concluido":
+        return jsonify({"erro": "Job nao encontrado ou nao concluido"}), 404
+    r = job["resultado"]
+    buf = io.BytesIO(r["bytes"])
+    return send_file(
+        buf,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        as_attachment=True,
+        download_name=r["arquivo"],
+    )
+
+
+ALVO_FOTOS_PADRAO = 60   # 2 paginas de 30 — usado se o frontend nao mandar alvo_fotos
+
+
+@app.route("/galeria/iniciar", methods=["POST"])
+def galeria_iniciar():
+    """Inicia em segundo plano a busca das fotos de camera (ver
+    backend/fotos_reader.py) para a lista de pontos filtrados que o
+    frontend ja calculou. Corpo: {"municipio": <key>, "pontos": [{"id_ponto","link"}],
+    "alvo_fotos": N}. So busca fotos ate acumular `alvo_fotos` e entao pausa —
+    o resto so e liberado via POST /galeria/liberar/<job_id> (ver essa rota),
+    conforme o usuario navega pelas paginas da galeria."""
+    body = request.get_json(silent=True) or {}
+    key    = str(body.get("municipio", "")).strip()
+    pontos = body.get("pontos")
+    alvo   = body.get("alvo_fotos")
+
+    if not key:
+        return jsonify({"erro": "Campo 'municipio' obrigatorio"}), 400
+    if not isinstance(pontos, list) or not pontos:
+        return jsonify({"erro": "Nenhum ponto com LINK_RELATORIO no filtro atual"}), 400
+    if not isinstance(alvo, int) or alvo <= 0:
+        alvo = ALVO_FOTOS_PADRAO
+
+    try:
+        nome = _resolver_nome(key)
+    except FileNotFoundError as e:
+        return jsonify({"erro": str(e)}), 404
+
+    slug = re.sub(r"[^\w\-]+", "_", nome.upper()).strip("_") or "MUNICIPIO"
+    job_id = _criar_job("galeria", total=len(pontos))
+    _atualizar_job(job_id, alvo_fotos=alvo)
+
+    def _progresso(feito, total, novas_fotos):
+        _registrar_progresso_fotos(job_id, feito, total, novas_fotos)
+
+    def _pode_continuar():
+        job = _obter_job(job_id)
+        return bool(job) and len(job.get("fotos", [])) < job.get("alvo_fotos", 0)
+
+    def _run():
+        try:
+            fotos, erros = buscar_fotos_camera(
+                pontos, slug, config.FOTOS_CACHE_DIR,
+                max_workers=config.GALERIA_MAX_WORKERS,
+                delay_entre_lotes=config.GALERIA_DELAY_ENTRE_LOTES_SEGUNDOS,
+                on_progresso=_progresso, pode_continuar=_pode_continuar,
+            )
+            _atualizar_job(job_id, estado="concluido", resultado={"erros": erros})
+        except Exception as e:
+            log.error(f"[galeria] job {job_id} falhou: {e}")
+            _atualizar_job(job_id, estado="erro", erro=str(e))
+
+    threading.Thread(target=_run, daemon=True).start()
+    return jsonify({"job_id": job_id, "municipio": nome, "total": len(pontos)})
+
+
+@app.route("/galeria/liberar/<job_id>", methods=["POST"])
+def galeria_liberar(job_id):
+    """Aumenta o alvo_fotos de um job de galeria ja em andamento, liberando o
+    laco pausado em buscar_fotos_camera pra buscar mais um pouco (ver
+    fotos_reader.buscar_fotos_camera: pode_continuar). Chamado quando o
+    usuario navega pra uma pagina nova na galeria. So aumenta, nunca diminui."""
+    body = request.get_json(silent=True) or {}
+    alvo = body.get("alvo_fotos")
+    if not isinstance(alvo, int) or alvo < 0:
+        return jsonify({"erro": "Campo 'alvo_fotos' invalido"}), 400
+
+    with _jobs_lock:
+        job = _jobs.get(job_id)
+        if not job or job["tipo"] != "galeria":
+            return jsonify({"erro": "Job nao encontrado"}), 404
+        job["alvo_fotos"] = max(job.get("alvo_fotos", 0), alvo)
+        alvo_atual = job["alvo_fotos"]
+
+    return jsonify({"ok": True, "alvo_fotos": alvo_atual})
+
+
+@app.route("/galeria/progresso/<job_id>")
+def galeria_progresso(job_id):
+    """Progresso + fotos acumuladas ate agora (parciais ou finais) — o
+    frontend usa isso pra ir preenchendo a galeria conforme cada lote de
+    requisicoes termina, em vez de esperar o job inteiro concluir."""
+    job = _obter_job(job_id)
+    if not job or job["tipo"] != "galeria":
+        return jsonify({"erro": "Job nao encontrado"}), 404
+    return jsonify({
+        "estado": job["estado"], "feito": job["feito"], "total": job["total"],
+        "erro": job["erro"], "fotos": job.get("fotos", []),
+    })
 
 
 @app.route("/export/<path:key>")
