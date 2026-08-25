@@ -91,9 +91,9 @@ function chaveRegional(props) {
 ```json
 {
   "2304400": {
-    "status": "ENTREGA REALIZADA",
+    "status": "Z-ENTREGA REALIZADA",
     "cor": "#1D9E75",
-    "ordem": 10,
+    "ordem": 12,
     "tipo": "NORMAL",
     "municipio": "FORTALEZA - REGIONAL 3"
   }
@@ -174,19 +174,22 @@ COLUNA_MUNICIPIO   = "MUNICIPIO"
 
 STATUS_DEFINICOES = [
     # ("valor_na_planilha", "cor_hex") — a ordem define a ordem da legenda
-    ("CAMPO NAO INICIADO",     "#B4B2A9"),  # cinza
+    ("CAMPO NAO INICIADO",     "#f58686ff"),  # cinza
     ("ESPERANDO CAMPO",        "#6B6A66"),  # cinza escuro
     ("AUDITORIAS",             "#2F80ED"),  # azul
     ("AGUARDANDO AUDITORIAS",  "#2F80ED"),  # azul
     ("INFORMAR ERRO %",        "#2F80ED"),  # azul
     ("PRIORIDADE EDIÇÃO",      "#E24B4A"),  # vermelho
     ("REEDIÇÃO",               "#E24B4A"),  # vermelho
-    ("ENTREGA",                "#E24B4A"),  # vermelho
+    ("AGUARDANDO ENTREGA",     "#E24B4A"),  # vermelho
     ("DUPLICADAS",             "#8E44AD"),  # roxo
-    ("ANÁLISE EDIÇÃO",         "#EF9F27"),  # laranja
-    ("ENTREGA REALIZADA",      "#1D9E75"),  # verde
+    ("ANÁLCISE EDIÇÃO",        "#EF9F27"),  # laranja
+    ("CADASTRO PARALISADO",    "#EF9F27"),  # laranja
+    ("EM ANDAMENTO",           "#ffe600ff"),
+    ("Z-ENTREGA REALIZADA",    "#1D9E75"),  # verde
     ("AJUSTE FINAL",           "#7B1F2B"),  # vinho
     ("AUDITORIA FINAL",        "#7B1F2B"),  # vinho
+    ("NÃO SOLICITADO",         "#b1b1b1ff"),
 ]
 # STATUS_CORES / STATUS_ROTULOS / STATUS_ORDEM são derivados desta lista,
 # normalizando a chave (uppercase, sem acento) para tolerar variação na planilha.
