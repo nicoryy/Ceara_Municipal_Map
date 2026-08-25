@@ -91,8 +91,9 @@ function chaveRegional(props) {
 ```json
 {
   "2304400": {
-    "status": "CADASTRO FINALIZADO",
+    "status": "ENTREGA REALIZADA",
     "cor": "#1D9E75",
+    "ordem": 10,
     "tipo": "NORMAL",
     "municipio": "FORTALEZA - REGIONAL 3"
   }
@@ -171,14 +172,26 @@ COLUNA_STATUS      = "status"
 COLUNA_TIPO        = "tipo"
 COLUNA_MUNICIPIO   = "MUNICIPIO"
 
-STATUS_CORES = {
-    "NAO INICIADO":       "#E24B4A",
-    "CAMPO PARALISADO":   "#EF9F27",
-    "CADASTRO FINALIZADO":"#1D9E75",
-    "EM ANDAMENTO":       "#EAD637",
-}
+STATUS_DEFINICOES = [
+    # ("valor_na_planilha", "cor_hex") — a ordem define a ordem da legenda
+    ("CAMPO NAO INICIADO",     "#B4B2A9"),  # cinza
+    ("ESPERANDO CAMPO",        "#6B6A66"),  # cinza escuro
+    ("AUDITORIAS",             "#2F80ED"),  # azul
+    ("AGUARDANDO AUDITORIAS",  "#2F80ED"),  # azul
+    ("INFORMAR ERRO %",        "#2F80ED"),  # azul
+    ("PRIORIDADE EDIÇÃO",      "#E24B4A"),  # vermelho
+    ("REEDIÇÃO",               "#E24B4A"),  # vermelho
+    ("ENTREGA",                "#E24B4A"),  # vermelho
+    ("DUPLICADAS",             "#8E44AD"),  # roxo
+    ("ANÁLISE EDIÇÃO",         "#EF9F27"),  # laranja
+    ("ENTREGA REALIZADA",      "#1D9E75"),  # verde
+    ("AJUSTE FINAL",           "#7B1F2B"),  # vinho
+    ("AUDITORIA FINAL",        "#7B1F2B"),  # vinho
+]
+# STATUS_CORES / STATUS_ROTULOS / STATUS_ORDEM são derivados desta lista,
+# normalizando a chave (uppercase, sem acento) para tolerar variação na planilha.
 
-COR_SEM_DADO  = "#B4B2A9"
+COR_SEM_DADO  = "#1e2236"
 GEOJSON_PATH  = "../frontend/municipios_ce.geojson"
 CACHE_PATH    = "../data/cache_dados.json"
 SERVER_PORT   = 5000                    # valor padrão, sobrescrevível via .env

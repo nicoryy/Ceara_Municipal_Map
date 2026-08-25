@@ -207,11 +207,14 @@ def municipios():
 
     resultado = {}
     for codigo, info in dados.items():
-        status = info.get("status", "")
-        cor = config.STATUS_CORES.get(status, config.COR_SEM_DADO)
+        bruto  = info.get("status", "")
+        chave  = config.normalizar_status(bruto)
+        cor    = config.STATUS_CORES.get(chave, config.COR_SEM_DADO)
+        rotulo = config.STATUS_ROTULOS.get(chave, bruto)
         resultado[codigo] = {
-            "status":    status,
+            "status":    rotulo,
             "cor":       cor,
+            "ordem":     config.STATUS_ORDEM.get(chave, 999),
             "tipo":      info.get("tipo", ""),
             "ano":       info.get("ano", ""),
             "municipio": info.get("municipio", ""),

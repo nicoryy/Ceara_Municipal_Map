@@ -5,6 +5,7 @@
 # =============================================================================
 
 import os
+import unicodedata
 from dotenv import load_dotenv
 
 load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env"))
@@ -61,21 +62,46 @@ CACHE_PATH = "../data/cache_dados.json"
 SERVER_PORT = int(_env_opcional("SERVER_PORT", "5000"))
 
 # =============================================================================
-# MAPEAMENTO DE STATUS → COR (hex ou nome CSS)
-# Adicione/remova status conforme sua planilha
-# Municípios sem dado na planilha aparecem em CINZA automaticamente
+# MAPEAMENTO DE STATUS → COR
+# Adicione/remova status conforme sua planilha.
+# A ordem da lista define a ordem de exibição na legenda do mapa.
+# Municípios sem dado (ou com status não reconhecido) aparecem em COR_SEM_DADO.
 # =============================================================================
-STATUS_CORES = {
-    # "valor_na_planilha": "cor_hex",
-    "CADASTRO FINALIZADO": "#1D9E75",   # verde
-    "EM ANDAMENTO":   "#CAA800",   # amarelo
-    "CAMPO PARALISADO":  "#CB7841",   # azul
-    "NAO INICIADO":  "#E24B4A",   # vermelho
-    # Adicione mais conforme necessário...
-}
 
-# Cor para municípios sem dado na planilha
-COR_SEM_DADO = "#B4B2A9"
+def normalizar_status(valor):
+    """Uppercase, sem acento, espaços colapsados — para lookup tolerante a
+    variação de caixa/acentuação na planilha."""
+    txt = unicodedata.normalize("NFKD", str(valor or ""))
+    txt = "".join(c for c in txt if not unicodedata.combining(c))
+    return " ".join(txt.upper().split())
+
+STATUS_DEFINICOES = [
+    # ("valor_na_planilha", "cor_hex")
+    ("CAMPO NAO INICIADO",     "#f58686ff"),  # cinza
+    ("ESPERANDO CAMPO",        "#6B6A66"),  # cinza escuro
+    ("AUDITORIAS",             "#2F80ED"),  # azul
+    ("AGUARDANDO AUDITORIAS",  "#2F80ED"),  # azul
+    ("INFORMAR ERRO %",        "#2F80ED"),  # azul
+    ("PRIORIDADE EDIÇÃO",      "#E24B4A"),  # vermelho
+    ("REEDIÇÃO",               "#E24B4A"),  # vermelho
+    ("AGUARDANDO ENTREGA",     "#E24B4A"),  # vermelho
+    ("DUPLICADAS",             "#8E44AD"),  # roxo
+    ("ANÁLCISE EDIÇÃO",        "#EF9F27"),  # laranja
+    ("CADASTRO PARALISADO",    "#EF9F27"),  # laranja
+    ("EM ANDAMENTO",           "#ffe600ff"),
+    ("Z-ENTREGA REALIZADA",    "#1D9E75"),  # verde
+    ("AJUSTE FINAL",           "#7B1F2B"),  # vinho
+    ("AUDITORIA FINAL",        "#7B1F2B"),  # vinho
+    ("NÃO SOLICITADO",         "#b1b1b1ff"),
+    # Adicione mais conforme necessário...
+]
+
+STATUS_CORES   = {normalizar_status(rotulo): cor for rotulo, cor in STATUS_DEFINICOES}
+STATUS_ROTULOS = {normalizar_status(rotulo): rotulo for rotulo, _ in STATUS_DEFINICOES}
+STATUS_ORDEM   = {normalizar_status(rotulo): i for i, (rotulo, _) in enumerate(STATUS_DEFINICOES)}
+
+# Cor para municípios sem dado na planilha (ou com status não reconhecido)
+COR_SEM_DADO = "#1e2236"
 
 # Cor da borda dos municípios no mapa
 COR_BORDA = "#ffffff"

@@ -1890,7 +1890,7 @@
     // Constantes de cor dos pontos (espelham backend/config.py)
     const COR_MEDICAO_SIM = "#7CFC00";
     const COR_MEDICAO_NAO = "#1E3A8A";
-    const COR_SEM_DADO    = "#B4B2A9";
+    const COR_SEM_DADO    = "#1e2236";
     const COR_TRAFO       = "#FFFFFF";   // branco
 
     // Pontos com PONTOTRAFO = SIM recebem cor destacada conforme a MEDICAO:
@@ -2375,9 +2375,11 @@
     // LEGENDA / FILTRO
     // ════════════════════════════════════════════════════════════
     function renderizarLegenda() {
-      const contagem = {};
+      const info = {};   // status -> { cor, ordem, count }
       Object.values(dadosPlanilha).forEach(d => {
-        if (d.status) contagem[d.status] = (contagem[d.status] || 0) + 1;
+        if (!d.status) return;
+        if (!info[d.status]) info[d.status] = { cor: d.cor, ordem: d.ordem ?? 999, count: 0 };
+        info[d.status].count++;
       });
 
       let semDado = 0;
@@ -2390,10 +2392,11 @@
 
       const container = document.getElementById("legenda-lista");
       container.innerHTML = "";
-      Object.entries(contagem).forEach(([status, count]) => {
-        const cor = Object.values(dadosPlanilha).find(d => d.status === status)?.cor || "#888";
-        container.appendChild(criarItemFiltro("status", status, cor, count));
-      });
+      Object.entries(info)
+        .sort((a, b) => a[1].ordem - b[1].ordem)
+        .forEach(([status, { cor, count }]) => {
+          container.appendChild(criarItemFiltro("status", status, cor, count));
+        });
       if (semDado > 0) {
         container.appendChild(criarItemFiltro("status", "(sem dado)", "#1e2236", semDado, true));
       }
