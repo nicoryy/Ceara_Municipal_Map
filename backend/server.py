@@ -32,7 +32,7 @@ from transformadores_reader import carregar_transformadores
 from areas_inacessiveis_reader import carregar_areas_inacessiveis
 from duplicadas import detectar_duplicadas, exportar_xlsx, nome_arquivo_duplicados
 from geometria_util import geometria_para
-from fotos_reader import buscar_fotos_camera
+from fotos_reader import buscar_fotos, TIPOS_VALIDOS
 
 logging.basicConfig(
     level=logging.INFO,
@@ -140,7 +140,7 @@ def _atualizar_job(job_id: str, **kwargs):
 
 
 def _registrar_progresso_fotos(job_id: str, feito: int, total: int, novas_fotos: list):
-    """Callback de progresso da galeria (ver fotos_reader.buscar_fotos_camera) —
+    """Callback de progresso da galeria (ver fotos_reader.buscar_fotos) —
     vai acumulando o resultado parcial no job pra permitir carregamento
     progressivo no frontend, sem esperar o job inteiro terminar."""
     with _jobs_lock:
@@ -387,16 +387,20 @@ ALVO_FOTOS_PADRAO = 60   # 2 paginas de 30 — usado se o frontend nao mandar al
 
 @app.route("/galeria/iniciar", methods=["POST"])
 def galeria_iniciar():
-    """Inicia em segundo plano a busca das fotos de camera (ver
-    backend/fotos_reader.py) para a lista de pontos filtrados que o
-    frontend ja calculou. Corpo: {"municipio": <key>, "pontos": [{"id_ponto","link"}],
-    "alvo_fotos": N}. So busca fotos ate acumular `alvo_fotos` e entao pausa —
-    o resto so e liberado via POST /galeria/liberar/<job_id> (ver essa rota),
-    conforme o usuario navega pelas paginas da galeria."""
+    """Inicia em segundo plano a busca de fotos (ver backend/fotos_reader.py)
+    para a lista de pontos filtrados que o frontend ja calculou. Corpo:
+    {"municipio": <key>, "pontos": [{"id_ponto","link"}], "alvo_fotos": N,
+    "tipo": "camera"|"celular"} — "tipo" define qual das duas galerias
+    (default "camera"); a raspagem em si sempre traz os dois tipos, so o
+    resultado devolvido no job e filtrado. So busca fotos ate acumular
+    `alvo_fotos` e entao pausa — o resto so e liberado via
+    POST /galeria/liberar/<job_id> (ver essa rota), conforme o usuario
+    navega pelas paginas da galeria."""
     body = request.get_json(silent=True) or {}
     key    = str(body.get("municipio", "")).strip()
     pontos = body.get("pontos")
     alvo   = body.get("alvo_fotos")
+    tipo   = str(body.get("tipo") or "camera").strip().lower()
 
     if not key:
         return jsonify({"erro": "Campo 'municipio' obrigatorio"}), 400
@@ -404,6 +408,8 @@ def galeria_iniciar():
         return jsonify({"erro": "Nenhum ponto com LINK_RELATORIO no filtro atual"}), 400
     if not isinstance(alvo, int) or alvo <= 0:
         alvo = ALVO_FOTOS_PADRAO
+    if tipo not in TIPOS_VALIDOS:
+        return jsonify({"erro": f"Campo 'tipo' invalido — use um de {TIPOS_VALIDOS}"}), 400
 
     try:
         nome = _resolver_nome(key)
@@ -412,7 +418,7 @@ def galeria_iniciar():
 
     slug = re.sub(r"[^\w\-]+", "_", nome.upper()).strip("_") or "MUNICIPIO"
     job_id = _criar_job("galeria", total=len(pontos))
-    _atualizar_job(job_id, alvo_fotos=alvo)
+    _atualizar_job(job_id, alvo_fotos=alvo, foto_tipo=tipo)
 
     def _progresso(feito, total, novas_fotos):
         _registrar_progresso_fotos(job_id, feito, total, novas_fotos)
@@ -423,8 +429,8 @@ def galeria_iniciar():
 
     def _run():
         try:
-            fotos, erros = buscar_fotos_camera(
-                pontos, slug, config.FOTOS_CACHE_DIR,
+            fotos, erros = buscar_fotos(
+                pontos, slug, config.FOTOS_CACHE_DIR, tipo=tipo,
                 max_workers=config.GALERIA_MAX_WORKERS,
                 delay_entre_lotes=config.GALERIA_DELAY_ENTRE_LOTES_SEGUNDOS,
                 on_progresso=_progresso, pode_continuar=_pode_continuar,
@@ -435,14 +441,14 @@ def galeria_iniciar():
             _atualizar_job(job_id, estado="erro", erro=str(e))
 
     threading.Thread(target=_run, daemon=True).start()
-    return jsonify({"job_id": job_id, "municipio": nome, "total": len(pontos)})
+    return jsonify({"job_id": job_id, "municipio": nome, "total": len(pontos), "tipo": tipo})
 
 
 @app.route("/galeria/liberar/<job_id>", methods=["POST"])
 def galeria_liberar(job_id):
     """Aumenta o alvo_fotos de um job de galeria ja em andamento, liberando o
-    laco pausado em buscar_fotos_camera pra buscar mais um pouco (ver
-    fotos_reader.buscar_fotos_camera: pode_continuar). Chamado quando o
+    laco pausado em buscar_fotos pra buscar mais um pouco (ver
+    fotos_reader.buscar_fotos: pode_continuar). Chamado quando o
     usuario navega pra uma pagina nova na galeria. So aumenta, nunca diminui."""
     body = request.get_json(silent=True) or {}
     alvo = body.get("alvo_fotos")
@@ -469,7 +475,7 @@ def galeria_progresso(job_id):
         return jsonify({"erro": "Job nao encontrado"}), 404
     return jsonify({
         "estado": job["estado"], "feito": job["feito"], "total": job["total"],
-        "erro": job["erro"], "fotos": job.get("fotos", []),
+        "erro": job["erro"], "fotos": job.get("fotos", []), "tipo": job.get("foto_tipo", "camera"),
     })
 
 

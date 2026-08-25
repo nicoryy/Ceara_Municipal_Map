@@ -12,16 +12,18 @@ secao 2):
 - Deduplicar pelas <img src> absolutas (o carrossel repete cada imagem).
 - So contam as que tem "/wsipsatel/" no path (a extensao original nao
   filtra e produz cards de lixo pra logos/icones).
-- Foto de CAMERA = nao tem o padrao UTM<zona>[letra]_<E>_<N>UTM no nome do
-  arquivo. Quem tem esse padrao e foto de CELULAR (tem coordenada) — essas
-  sao descartadas aqui, so queremos as de camera.
+- Classificacao pelo NOME do arquivo (nunca EXIF): tem o padrao
+  UTM<zona>[banda]_<E>_<N>UTM => foto de CELULAR (tem coordenada); sem o
+  padrao => foto de CAMERA. As duas galerias do frontend (Camera/Celular)
+  vem da mesma raspagem, so filtrando por esse campo (ver buscar_fotos).
 - Tecnico/POS_ID/Upload vem do path da URL:
     .../wsipsatel/<ano>/<mes>/<usuario>//<data_upload>/<pos_id>/<arquivo>
   usuario = parts[idx+3]; offset normalmente 4, mas vira 5 quando
   parts[idx+4] nao e "\\d{8}" e parts[idx+5] e (usuario ocupou 2 segmentos).
 - Ponto/Captura vem do NOME do arquivo (nunca de EXIF):
     Ponto:    _{1,2}([A-Za-z0-9-]+)_POS_ID
-    Captura:  (\\d{14})\\.ext no final (DDMMAAAAHHMMSS)
+    Captura:  (\\d{14})\\.ext no final — celular = DDMMAAAAHHMMSS, camera
+              pura = AAAAMMDDHHMMSS (ver _formatar_captura).
 """
 
 import json
@@ -34,13 +36,17 @@ import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from urllib.parse import unquote, urljoin, urlparse
 
+from utm import utm_para_latlon
+
 log = logging.getLogger(__name__)
 
 _IMG_RE    = re.compile(r'<img[^>]+src=["\']([^"\']+)["\']', re.IGNORECASE)
-_UTM_RE    = re.compile(r'UTM(\d{1,2})[A-Za-z]?_(\d+)_(\d+)UTM', re.IGNORECASE)
+_UTM_RE    = re.compile(r'UTM(\d{1,2})([A-Za-z]?)_(\d+)_(\d+)UTM', re.IGNORECASE)
 _TS_RE     = re.compile(r'(\d{14})\.[A-Za-z0-9]+$')
 _PONTO_RE  = re.compile(r'_{1,2}([A-Za-z0-9\-]+)_POS_ID', re.IGNORECASE)
 _OITO_DIGITOS_RE = re.compile(r'^\d{8}$')
+
+TIPOS_VALIDOS = ("camera", "celular")
 
 TIMEOUT_SEGUNDOS  = 15
 
@@ -65,29 +71,50 @@ def _data_valida(dd: str, mm: str, aaaa: str) -> bool:
         return False
 
 
-def _formatar_captura(ts: str) -> str:
+def _formatar_captura(ts: str, tipo: str) -> str:
     """
     O content.js original assume sempre DDAAAAMMHHMMSS — correto pras fotos
     de CELULAR (nome com tag UTM, ex.: ..._25072024151005.jpg). Mas fotos de
-    CAMERA pura (sem tag, ex.: 20240725151118.jpg — as que essa feature usa)
-    seguem AAAAMMDDHHMMSS, um formato diferente: aplicando DDMMAAAA nelas da
-    mes=24 (invalido). Confirmado comparando o horario de captura de uma
-    foto de celular com o de uma foto de camera do mesmo ponto/sessao (ver
-    plano da feature). Aqui tentamos DDMMAAAA primeiro (paridade com a
-    extensao); se a data resultante for invalida, cai para AAAAMMDD.
+    CAMERA pura (sem tag, ex.: 20240725151118.jpg) seguem AAAAMMDDHHMMSS, um
+    formato diferente: aplicando DDMMAAAA nelas da mes=24 (invalido).
+    Confirmado comparando o horario de captura de uma foto de celular com o
+    de uma foto de camera do mesmo ponto/sessao (ver plano da feature).
+
+    Como `tipo` (ver _classificar) ja diz qual das duas e, tentamos primeiro
+    o formato esperado pra esse tipo; o outro fica como fallback pra nome de
+    arquivo fora do padrao (rede de seguranca, nao deveria disparar na
+    pratica).
     """
-    dd, mm, aaaa = ts[0:2], ts[2:4], ts[4:8]
-    if _data_valida(dd, mm, aaaa):
-        return f"{dd}/{mm}/{aaaa} {ts[8:10]}:{ts[10:12]}:{ts[12:14]}"
-    aaaa2, mm2, dd2 = ts[0:4], ts[4:6], ts[6:8]
-    if _data_valida(dd2, mm2, aaaa2):
-        return f"{dd2}/{mm2}/{aaaa2} {ts[8:10]}:{ts[10:12]}:{ts[12:14]}"
+    dd, mm, aaaa    = ts[0:2], ts[2:4], ts[4:8]     # DDMMAAAA — celular
+    aaaa2, mm2, dd2 = ts[0:4], ts[4:6], ts[6:8]     # AAAAMMDD — camera
+
+    ordem = [(dd, mm, aaaa), (dd2, mm2, aaaa2)]
+    if tipo == "camera":
+        ordem.reverse()
+
+    for d, m, a in ordem:
+        if _data_valida(d, m, a):
+            return f"{d}/{m}/{a} {ts[8:10]}:{ts[10:12]}:{ts[12:14]}"
     return f"{dd}/{mm}/{aaaa} {ts[8:10]}:{ts[10:12]}:{ts[12:14]}"
+
+
+def _classificar(arquivo: str):
+    """Tipo (camera/celular) + coordenada UTM a partir do NOME do arquivo
+    (ver regra no topo do modulo). Retorna (tipo, utm) — utm e None pras de
+    camera, ou {"zona", "banda", "e", "n"} pras de celular."""
+    m = _UTM_RE.search(arquivo)
+    if not m:
+        return "camera", None
+    zona, banda, e, n = m.groups()
+    return "celular", {"zona": int(zona), "banda": banda or "", "e": float(e), "n": float(n)}
 
 
 def _parse_meta(url: str) -> dict:
     """Espelha parseImageMeta() do content.js original."""
-    meta = {"url": url, "tecnico": "", "pos_id": "", "upload": "", "captura": "", "arquivo": "", "ponto": ""}
+    meta = {
+        "url": url, "tecnico": "", "pos_id": "", "upload": "", "captura": "",
+        "arquivo": "", "ponto": "", "tipo": "camera", "utm": "", "lat": None, "lon": None,
+    }
     try:
         partes = [p for p in urlparse(url).path.split("/") if p]
 
@@ -108,9 +135,17 @@ def _parse_meta(url: str) -> dict:
         arquivo = unquote(partes[-1]) if partes else ""
         meta["arquivo"] = arquivo
 
+        tipo, utm = _classificar(arquivo)
+        meta["tipo"] = tipo
+        if utm:
+            meta["utm"] = f"{utm['zona']}{utm['banda']} {utm['e']:.0f} / {utm['n']:.0f}"
+            lat, lon = utm_para_latlon(utm["zona"], utm["e"], utm["n"], utm["banda"])
+            meta["lat"] = lat
+            meta["lon"] = lon
+
         m = _TS_RE.search(arquivo)
         if m:
-            meta["captura"] = _formatar_captura(m.group(1))
+            meta["captura"] = _formatar_captura(m.group(1), tipo)
 
         m = _PONTO_RE.search(arquivo)
         if m:
@@ -120,15 +155,13 @@ def _parse_meta(url: str) -> dict:
     return meta
 
 
-def _eh_foto_camera(url: str) -> bool:
-    arquivo = unquote(url.rsplit("/", 1)[-1])
-    return not _UTM_RE.search(arquivo)
-
-
-def buscar_fotos_camera_do_link(link: str) -> list:
-    """Baixa a pagina de relatorio e retorna as fotos de CAMERA nela (lista
-    de dicts, ver _parse_meta). Levanta em erro de rede/HTTP — quem chama
-    decide como tratar (o job continua com os outros links)."""
+def buscar_fotos_do_link(link: str) -> list:
+    """Baixa a pagina de relatorio e retorna TODAS as fotos nela — camera e
+    celular juntas (lista de dicts, ver _parse_meta; cada uma tem "tipo").
+    A separacao por tipo fica com quem chama (ver buscar_fotos), pra uma
+    unica raspagem por link alimentar as duas galerias. Levanta em erro de
+    rede/HTTP — quem chama decide como tratar (o job continua com os outros
+    links)."""
     req = urllib.request.Request(link, headers={"User-Agent": "Mozilla/5.0"})
     with urllib.request.urlopen(req, timeout=TIMEOUT_SEGUNDOS) as resp:
         html = resp.read().decode("utf-8", "replace")
@@ -142,30 +175,57 @@ def buscar_fotos_camera_do_link(link: str) -> list:
         vistos.add(url_abs)
         if "/wsipsatel/" not in url_abs:
             continue
-        if not _eh_foto_camera(url_abs):
-            continue
         fotos.append(_parse_meta(url_abs))
     return fotos
 
 
 # -----------------------------------------------------------------------------
 # Cache em disco por municipio + busca concorrente com progresso
+#
+# Formato v2 (atual): {"versao": 2, "links": {<link>: {"completo": bool, "fotos": [...]}}}
+# "fotos" guarda TODOS os tipos de uma vez (camera + celular), ja que uma
+# unica raspagem do link traz os dois. "completo" so vira True depois de uma
+# raspagem de verdade (nao veio de cache v1 migrado, ver _carregar_cache) —
+# ate la so serve pra galeria de CAMERA, que e o unico tipo que o cache v1
+# (formato antigo, sem "tipo") garantia ter capturado por completo.
 # -----------------------------------------------------------------------------
 
 def _cache_path(cache_dir: str, slug: str) -> str:
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), cache_dir, f"{slug}.json")
 
 
+def _cache_vazio() -> dict:
+    return {"versao": 2, "links": {}}
+
+
 def _carregar_cache(cache_dir: str, slug: str) -> dict:
     path = _cache_path(cache_dir, slug)
     if not os.path.exists(path):
-        return {}
+        return _cache_vazio()
     try:
         with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
+            bruto = json.load(f)
     except Exception as e:
         log.warning(f"[fotos] Erro lendo cache {slug}: {e}")
-        return {}
+        return _cache_vazio()
+
+    if isinstance(bruto, dict) and bruto.get("versao") == 2 and isinstance(bruto.get("links"), dict):
+        return bruto
+
+    # Formato v1 (pre-galeria-celular): {link: [fotos]}, sem campo "tipo" —
+    # so continha fotos de camera (a raspagem antiga descartava as de
+    # celular). Migra em memoria; "completo": False sinaliza que so cobre
+    # camera, entao um pedido de celular ainda precisa raspar de verdade.
+    links = {}
+    if isinstance(bruto, dict):
+        for link, fotos in bruto.items():
+            fotos_v2 = []
+            for foto in (fotos or []):
+                foto = dict(foto)
+                foto.setdefault("tipo", "camera")
+                fotos_v2.append(foto)
+            links[link] = {"completo": False, "fotos": fotos_v2}
+    return {"versao": 2, "links": links}
 
 
 def _salvar_cache(cache_dir: str, slug: str, cache: dict):
@@ -178,19 +238,29 @@ def _salvar_cache(cache_dir: str, slug: str, cache: dict):
         log.warning(f"[fotos] Nao foi possivel salvar cache {slug}: {e}")
 
 
-def buscar_fotos_camera(pontos, slug: str, cache_dir: str,
-                         max_workers: int = LOTE_TAMANHO_PADRAO,
-                         delay_entre_lotes: float = DELAY_ENTRE_LOTES_SEGUNDOS,
-                         on_progresso=None, pode_continuar=None,
-                         espera_pausa_segundos: float = 0.3,
-                         timeout_pausa_segundos: float = 120.0):
+def buscar_fotos(pontos, slug: str, cache_dir: str, tipo: str = "camera",
+                  max_workers: int = LOTE_TAMANHO_PADRAO,
+                  delay_entre_lotes: float = DELAY_ENTRE_LOTES_SEGUNDOS,
+                  on_progresso=None, pode_continuar=None,
+                  espera_pausa_segundos: float = 0.3,
+                  timeout_pausa_segundos: float = 120.0):
     """
     pontos -> lista de {"id_ponto": ..., "link": ...} (um LINK_RELATORIO por
     ponto do levantamento, ja filtrado pelo frontend).
 
-    Cache em disco por municipio (cache_dir/<slug>.json), chave = link.
-    Links ja cacheados nao sao rebuscados. Links pendentes sao buscados em
-    lotes de ate `max_workers` requisicoes simultaneas, com uma pausa de
+    tipo -> "camera" ou "celular" (ver TIPOS_VALIDOS/_classificar). So as
+    fotos desse tipo entram no resultado e contam pro progresso/alvo_fotos —
+    mas a raspagem em si (rede) sempre traz os dois tipos de uma vez, e os
+    dois ficam guardados no cache (ver abaixo), entao pedir "celular" depois
+    de ja ter pedido "camera" pro mesmo municipio no mais das vezes nem bate
+    na rede de novo.
+
+    Cache em disco por municipio (cache_dir/<slug>.json, formato v2, ver
+    comentario acima), chave = link. Um link so e considerado cache hit pro
+    tipo pedido quando a entrada esta "completo" (raspagem de verdade feita
+    por essa versao) ou quando o tipo pedido e "camera" (cache v1 migrado
+    garante cobrir esse caso). Links sem hit sao buscados em lotes de ate
+    `max_workers` requisicoes simultaneas, com uma pausa de
     `delay_entre_lotes` segundos entre um lote e o proximo — protege o
     servidor de relatorios do rate limit dele.
 
@@ -205,14 +275,18 @@ def buscar_fotos_camera(pontos, slug: str, cache_dir: str,
     dormindo pra sempre.
 
     on_progresso(feito, total, novas_fotos) e chamado apos cada link
-    processado (cache hit ou miss), com `novas_fotos` sendo so as fotos
-    adicionadas por ESSE link — usado pelo chamador (server.py) pra ir
-    acumulando o resultado parcial do job e permitir carregamento
+    processado (cache hit ou miss), com `novas_fotos` sendo so as fotos do
+    tipo pedido adicionadas por ESSE link — usado pelo chamador (server.py)
+    pra ir acumulando o resultado parcial do job e permitir carregamento
     progressivo na galeria, sem esperar o job inteiro terminar.
 
-    Retorna (fotos, links_com_erro) — fotos e uma lista de dicts com
-    id_ponto/link anexados a cada foto (ver _parse_meta pros demais campos).
+    Retorna (fotos, links_com_erro) — fotos e uma lista de dicts (so do tipo
+    pedido) com id_ponto/link anexados a cada foto (ver _parse_meta pros
+    demais campos).
     """
+    if tipo not in TIPOS_VALIDOS:
+        tipo = "camera"
+
     id_ponto_por_link = {}
     ordem_links = []
     for p in pontos:
@@ -223,6 +297,7 @@ def buscar_fotos_camera(pontos, slug: str, cache_dir: str,
         ordem_links.append(link)
 
     cache = _carregar_cache(cache_dir, slug)
+    links_cache = cache["links"]
     total = len(ordem_links)
     feito = 0
     erros = []
@@ -231,6 +306,8 @@ def buscar_fotos_camera(pontos, slug: str, cache_dir: str,
     def _anexar(link, fotos):
         novas = []
         for foto in fotos:
+            if foto.get("tipo") != tipo:
+                continue
             foto = dict(foto)
             foto["link"] = link
             foto["id_ponto"] = id_ponto_por_link[link]
@@ -240,8 +317,10 @@ def buscar_fotos_camera(pontos, slug: str, cache_dir: str,
 
     pendentes = []
     for link in ordem_links:
-        if link in cache:
-            novas = _anexar(link, cache[link])
+        entrada = links_cache.get(link)
+        cache_cobre_tipo = entrada is not None and (entrada.get("completo") or tipo == "camera")
+        if cache_cobre_tipo:
+            novas = _anexar(link, entrada.get("fotos", []))
             feito += 1
             if on_progresso:
                 on_progresso(feito, total, novas)
@@ -263,7 +342,7 @@ def buscar_fotos_camera(pontos, slug: str, cache_dir: str,
                     return resultado, erros
         lote = pendentes[i:i + max_workers]
         with ThreadPoolExecutor(max_workers=len(lote)) as ex:
-            futuros = {ex.submit(buscar_fotos_camera_do_link, link): link for link in lote}
+            futuros = {ex.submit(buscar_fotos_do_link, link): link for link in lote}
             for fut in as_completed(futuros):
                 link = futuros[fut]
                 try:
@@ -272,7 +351,10 @@ def buscar_fotos_camera(pontos, slug: str, cache_dir: str,
                     log.warning(f"[fotos] Falha em {link}: {e}")
                     fotos = []
                     erros.append(link)
-                cache[link] = fotos
+                # Raspagem de verdade traz os dois tipos — guarda os dois no
+                # cache ("completo": True) mesmo que so um tenha sido pedido,
+                # assim o outro tipo vira cache hit sem bater na rede de novo.
+                links_cache[link] = {"completo": True, "fotos": fotos}
                 novas = _anexar(link, fotos)
                 feito += 1
                 if on_progresso:
@@ -281,5 +363,5 @@ def buscar_fotos_camera(pontos, slug: str, cache_dir: str,
             time.sleep(delay_entre_lotes)
 
     _salvar_cache(cache_dir, slug, cache)
-    log.info(f"[fotos] {slug}: {len(resultado)} fotos de camera em {total} links ({len(erros)} erros)")
+    log.info(f"[fotos] {slug}: {len(resultado)} fotos de {tipo} em {total} links ({len(erros)} erros)")
     return resultado, erros

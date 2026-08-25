@@ -1153,12 +1153,23 @@
       padding: 16px 16px 12px;
     }
 
-    /* ── ações do município selecionado (Duplicadas / Galeria) ── */
+    /* ── ações do município selecionado (Duplicadas / Galeria Câmera / Galeria Celular) ──
+       flex-wrap: Duplicadas sozinho numa linha (flex-basis 100%) e as duas
+       galerias dividindo a linha de baixo — três botões flex:1 numa linha só
+       estourariam o white-space:nowrap de "Duplicadas" no --panel-w:280px. ── */
     #painel-acoes {
       display: flex;
+      flex-wrap: wrap;
       gap: 8px;
       padding: 0 16px 14px;
       border-bottom: 1px solid var(--border);
+    }
+    #painel-acoes #btn-duplicadas {
+      flex: 1 1 100%;
+    }
+    #painel-acoes #btn-galeria-camera,
+    #painel-acoes #btn-galeria-celular {
+      flex: 1 1 calc(50% - 4px);
     }
     #painel-acoes button {
       flex: 1;
@@ -1374,6 +1385,28 @@
     .galeria-item-abrir:hover {
       background: var(--accent);
     }
+    /* ── 📍 "ver no mapa" — só nos cards da galeria Celular (tem coordenada
+       nos metadados). Empilha à esquerda do ⧉ "abrir em nova aba". ── */
+    .galeria-item-mapa {
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(15,17,23,.72);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      line-height: 1;
+    }
+    .galeria-item-mapa:hover {
+      background: var(--accent);
+    }
     .galeria-vazio {
       color: var(--muted);
       font-size: 13px;
@@ -1541,8 +1574,11 @@
           <button id="btn-duplicadas" disabled title="Selecione um município para habilitar">
             <span class="ri">⧉</span> Duplicadas
           </button>
-          <button id="btn-galeria" disabled title="Disponível dentro do levantamento, com algum filtro ativo">
-            <span class="ri">▦</span> Galeria
+          <button id="btn-galeria-camera" disabled title="Disponível dentro do levantamento, com algum filtro ativo">
+            <span class="ri">▦</span> Câmera
+          </button>
+          <button id="btn-galeria-celular" disabled title="Disponível dentro do levantamento, com algum filtro ativo">
+            <span class="ri">📱</span> Celular
           </button>
         </div>
       </div>
@@ -2363,12 +2399,15 @@
       btn.title = habilitado ? "" : "Selecione um município para habilitar";
     }
 
-    // Habilita/desabilita o botão "Galeria" — só faz sentido dentro do
-    // modo levantamento, com pontos filtrados e LINK_RELATORIO disponível.
+    // Habilita/desabilita os botões "Câmera"/"Celular" da galeria — só faz
+    // sentido dentro do modo levantamento, com pontos filtrados e
+    // LINK_RELATORIO disponível. Os dois seguem o mesmo estado.
     function atualizarBotaoGaleria(habilitado) {
-      const btn = document.getElementById("btn-galeria");
-      btn.disabled = !habilitado;
-      btn.title = habilitado ? "" : "Disponível dentro do levantamento, com algum filtro ativo";
+      ["btn-galeria-camera", "btn-galeria-celular"].forEach(id => {
+        const btn = document.getElementById(id);
+        btn.disabled = !habilitado;
+        btn.title = habilitado ? "" : "Disponível dentro do levantamento, com algum filtro ativo";
+      });
     }
 
     // ════════════════════════════════════════════════════════════
@@ -4200,8 +4239,11 @@
     }
 
     // ════════════════════════════════════════════════════════════
-    // GALERIA — fotos de câmera dos pontos do filtro atual do levantamento,
-    // extraídas server-side do LINK_RELATORIO (ver backend/fotos_reader.py).
+    // GALERIA — fotos dos pontos do filtro atual do levantamento, extraídas
+    // server-side do LINK_RELATORIO (ver backend/fotos_reader.py). Duas
+    // variantes, mesmo modal: "camera" (sem coordenada nos metadados) e
+    // "celular" (metadados trazem UTM — mostrado no tooltip do card, com um
+    // ícone 📍 que centraliza o mapa na captura, ver focarCoordenadaGaleria).
     // Reusa pontosVisiveisParaExport() — mesma lista que já alimenta o KML
     // de export, então respeita filtro geral + filtro de data + categorias.
     //
@@ -4217,7 +4259,9 @@
     let galeriaEmAndamento = false;   // true enquanto o job ainda esta buscando (nao "concluido")
     let galeriaJobId       = null;
     let galeriaAlvoFotos   = 0;       // ultimo alvo_fotos ja solicitado ao backend
+    let galeriaTipo        = "camera";   // "camera" ou "celular" — qual botao abriu o modal
     const GALERIA_POR_PAGINA = 30;   // 6 colunas x 10 linhas
+    const GALERIA_TITULOS = { camera: "Galeria Câmera", celular: "Galeria Celular" };
 
     function pontosParaGaleria() {
       return pontosVisiveisParaExport()
@@ -4225,7 +4269,7 @@
         .map(p => ({ id_ponto: p.ID_PONTO || "", link: p.LINK_RELATORIO }));
     }
 
-    async function abrirGaleria() {
+    async function abrirGaleria(tipo) {
       if (!levantamentoMode || !currentLevantamentoKey) return;
       const pontos = pontosParaGaleria();
       if (pontos.length === 0) {
@@ -4233,18 +4277,18 @@
         return;
       }
 
-      const btn = document.getElementById("btn-galeria");
+      const btn = document.getElementById(`btn-galeria-${tipo}`);
       btn.disabled = true;
       btn.classList.add("loading");
       // Abre o modal na hora, com a grade em estado "buscando" — as fotos
       // vao aparecendo aos poucos conforme o backend processa em lotes.
-      abrirModalGaleria();
+      abrirModalGaleria(tipo);
       galeriaAlvoFotos = 2 * GALERIA_POR_PAGINA;   // pagina 1 + 2, ver plano
       try {
         const r = await fetch(`${API}/galeria/iniciar`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ municipio: currentLevantamentoKey, pontos, alvo_fotos: galeriaAlvoFotos }),
+          body: JSON.stringify({ municipio: currentLevantamentoKey, pontos, alvo_fotos: galeriaAlvoFotos, tipo }),
         });
         if (!r.ok) {
           const erro = await r.json().catch(() => ({ erro: r.statusText }));
@@ -4301,16 +4345,17 @@
         sufixo += ` · buscando… ${progresso.feito}/${progresso.total} pontos`;
       }
       document.getElementById("galeria-titulo").textContent =
-        `Galeria — ${currentMunicipioNome || ""} · ${sufixo}`;
+        `${GALERIA_TITULOS[galeriaTipo]} — ${currentMunicipioNome || ""} · ${sufixo}`;
     }
 
-    function abrirModalGaleria() {
+    function abrirModalGaleria(tipo) {
       galeriaFotos       = [];
       galeriaPagina      = 0;
       galeriaEmAndamento = true;
       galeriaJobId       = null;
       galeriaAlvoFotos   = 0;
-      document.getElementById("galeria-titulo").textContent = `Galeria — ${currentMunicipioNome || ""}`;
+      galeriaTipo        = tipo;
+      document.getElementById("galeria-titulo").textContent = `${GALERIA_TITULOS[tipo]} — ${currentMunicipioNome || ""}`;
       renderizarPaginasGaleria();
       renderizarGaleria();
       document.getElementById("modal-galeria").classList.add("show");
@@ -4362,9 +4407,10 @@
       const status = document.getElementById("galeria-status");
 
       if (galeriaFotos.length === 0) {
+        const rotulo = galeriaTipo === "celular" ? "de celular" : "de câmera";
         grid.innerHTML = galeriaEmAndamento
           ? `<div class="galeria-vazio">Buscando fotos…</div>`
-          : `<div class="galeria-vazio">Nenhuma foto de câmera encontrada para os pontos do filtro atual.</div>`;
+          : `<div class="galeria-vazio">Nenhuma foto ${rotulo} encontrada para os pontos do filtro atual.</div>`;
         status.textContent = "";
         return;
       }
@@ -4379,10 +4425,19 @@
           f.pos_id   ? `POS_ID: ${f.pos_id}` : "",
           f.upload   ? `Upload: ${f.upload}` : "",
           f.captura  ? `Captura: ${f.captura}` : "",
+          f.utm      ? `UTM: ${f.utm}` : "",
         ].filter(Boolean).join(" · ");
+        // 📍 só nos cards com coordenada válida (galeria Celular) — abre
+        // focarCoordenadaGaleria via listener delegado (ver mais abaixo),
+        // não onclick inline, pra não interpolar valores no HTML.
+        const temCoord = f.lat != null && f.lon != null;
+        const botaoMapa = temCoord
+          ? `<button type="button" class="galeria-item-mapa" data-lat="${f.lat}" data-lon="${f.lon}" title="Ver no mapa">📍</button>`
+          : "";
         return `
       <div class="galeria-item" title="${escapeHtml(titulo)}">
         <img src="${escapeHtml(f.url)}" loading="lazy" alt="${escapeHtml(titulo)}">
+        ${botaoMapa}
         <a class="galeria-item-abrir" href="${escapeHtml(f.url)}" target="_blank" rel="noopener" title="Abrir em nova aba">⧉</a>
       </div>`;
       }).join("");
@@ -4392,6 +4447,32 @@
       status.textContent = (galeriaEmAndamento && visivel.length < GALERIA_POR_PAGINA)
         ? "Buscando mais fotos desta página…"
         : "";
+    }
+
+    // Transiente: fecha a galeria, voa até a coordenada da foto de celular e
+    // desenha um marcador temporário pra indicar onde a captura foi feita
+    // (a foto em si não corresponde a nenhum ponto do levantamento — é só
+    // referência visual, some sozinho depois de alguns segundos).
+    let galeriaMarcadorFoco = null;
+    function focarCoordenadaGaleria(lat, lon) {
+      fecharModalGaleria();
+      map.flyTo([lat, lon], 18, { duration: 0.6 });
+      if (galeriaMarcadorFoco) {
+        map.removeLayer(galeriaMarcadorFoco);
+        galeriaMarcadorFoco = null;
+      }
+      const marcador = L.circleMarker([lat, lon], {
+        radius:      10,
+        fillColor:   "#EAD637",
+        fillOpacity: 0.35,
+        color:       "#EAD637",
+        weight:      2,
+      }).addTo(map);
+      galeriaMarcadorFoco = marcador;
+      setTimeout(() => {
+        map.removeLayer(marcador);
+        if (galeriaMarcadorFoco === marcador) galeriaMarcadorFoco = null;
+      }, 6000);
     }
 
     // Fecha spiderfy e esconde o tooltip compartilhado (posição ficaria
@@ -4431,10 +4512,20 @@
 
     // Duplicadas / Galeria
     document.getElementById("btn-duplicadas").addEventListener("click", iniciarDuplicadas);
-    document.getElementById("btn-galeria").addEventListener("click", abrirGaleria);
+    document.getElementById("btn-galeria-camera").addEventListener("click", () => abrirGaleria("camera"));
+    document.getElementById("btn-galeria-celular").addEventListener("click", () => abrirGaleria("celular"));
     document.getElementById("galeria-fechar").addEventListener("click", fecharModalGaleria);
     document.getElementById("modal-galeria").addEventListener("click", (e) => {
       if (e.target.id === "modal-galeria") fecharModalGaleria();
+    });
+    // Delegado: o grid é reconstruído via innerHTML a cada renderizarGaleria(),
+    // então o listener fica no container fixo em vez de por card.
+    document.getElementById("galeria-grid").addEventListener("click", (e) => {
+      const btn = e.target.closest(".galeria-item-mapa");
+      if (!btn) return;
+      const lat = parseFloat(btn.dataset.lat);
+      const lon = parseFloat(btn.dataset.lon);
+      if (!Number.isNaN(lat) && !Number.isNaN(lon)) focarCoordenadaGaleria(lat, lon);
     });
 
     // Filtro geral de pontos
