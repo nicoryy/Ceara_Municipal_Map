@@ -177,29 +177,50 @@ def _resolver_arquivo_no_municipio(municipio_folder: str, config, somente_padrao
     raise FileNotFoundError("; ".join(erros))
 
 
-def _resolver_arquivo_em_bases(bases, nome_municipio: str, config, somente_padrao: bool = False):
+def _resolver_arquivo_em_bases(bases_por_ano, nome_municipio: str, config, somente_padrao: bool = False):
     """
-    Tenta cada base em ordem; dentro de cada uma, tenta a subpasta
+    Tenta cada (ano, base) em ordem; dentro de cada uma, tenta a subpasta
     prioritaria (entrega) antes da padrao (auditoria) — ver
-    _resolver_arquivo_no_municipio. Retorna (caminho, eh_entrega) da
+    _resolver_arquivo_no_municipio. Retorna (caminho, eh_entrega, ano) da
     primeira fonte encontrada. Levanta FileNotFoundError com o resumo de
     todas as tentativas se nada bater em nenhuma base.
+
+    bases_por_ano: lista de tuplas (ano:int, base:str), ordem de tentativa.
     """
     erros = []
-    for base in bases:
+    for ano, base in bases_por_ano:
         try:
             folder = _find_municipio_folder(base, nome_municipio)
         except FileNotFoundError as e:
             erros.append(f"[{base}] {e}")
             continue
         try:
-            return _resolver_arquivo_no_municipio(folder, config, somente_padrao=somente_padrao)
+            arquivo, eh_entrega = _resolver_arquivo_no_municipio(folder, config, somente_padrao=somente_padrao)
+            return arquivo, eh_entrega, ano
         except FileNotFoundError as e:
             erros.append(f"[{base}] {e}")
             continue
     raise FileNotFoundError(
         "Levantamento nao encontrado em nenhuma base:\n  - " + "\n  - ".join(erros)
     )
+
+
+def anos_disponiveis(config, nome_municipio: str, bases_por_ano) -> list:
+    """
+    Sondagem rapida (so sistema de arquivos, nenhum workbook aberto) de em
+    quais anos o municipio tem uma planilha de levantamento resolvivel
+    (entrega ou padrao). Retorna lista de anos (int), ordem decrescente.
+    """
+    anos = []
+    for ano, base in bases_por_ano:
+        try:
+            folder = _find_municipio_folder(base, nome_municipio)
+            _resolver_arquivo_no_municipio(folder, config)
+        except FileNotFoundError:
+            continue
+        anos.append(ano)
+    anos.sort(reverse=True)
+    return anos
 
 
 def _find_sheet(wb, alvo: str) -> str:
@@ -561,7 +582,7 @@ def _slug(nome: str) -> str:
 # Abertura do workbook + orquestracao do cache
 # -----------------------------------------------------------------------------
 
-CACHE_SCHEMA = 1  # bump quando o formato do cache (categorias/entrega) mudar
+CACHE_SCHEMA = 2  # bump quando o formato do cache (categorias/entrega/ano) mudar
 
 
 def _tentar_ler_arquivo(xlsm: str, eh_entrega: bool, config):
@@ -603,13 +624,21 @@ def _ler_cache(cache_path: str, slug: str):
         return None
 
 
+def _cache_path_do_ano(config, slug: str, ano) -> str:
+    cache_dir = config.LEVANTAMENTOS_CACHE_DIR
+    nome = f"{slug}__{ano}.json" if ano is not None else f"{slug}.json"
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), cache_dir, nome)
+
+
 def carregar_levantamento(config, nome_municipio: str, bases=None):
     """
-    Le o levantamento do municipio. Usa cache por mtime + caminho do arquivo.
-    Retorna {"pontos": [...], "categorias": [...], "entrega": bool}.
+    Le o levantamento do municipio. Usa cache por mtime + caminho do arquivo,
+    um arquivo de cache por ano (ver _cache_path_do_ano). Retorna
+    {"pontos": [...], "categorias": [...], "entrega": bool, "ano": int|None}.
 
-    bases: lista de diretorios base para procurar em ordem. Quando None,
-    usa apenas config.LEVANTAMENTOS_BASE_PATH (comportamento padrao).
+    bases: lista de tuplas (ano:int, base:str) para procurar em ordem.
+    Quando None, usa config.LEVANTAMENTOS_BASES_POR_ANO (todos os anos
+    configurados, do mais recente ao mais antigo).
 
     Prioridade dentro de cada base: subpasta prioritaria (entrega) antes da
     subpasta padrao (auditoria) — ver _resolver_arquivo_em_bases. Se a
@@ -621,32 +650,32 @@ def carregar_levantamento(config, nome_municipio: str, bases=None):
     ultimo cache valido para este municipio e servido no lugar, com
     "stale": True, em vez de propagar o erro.
     """
-    cache_dir  = config.LEVANTAMENTOS_CACHE_DIR
-    slug       = _slug(nome_municipio)
-    cache_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), cache_dir, f"{slug}.json")
+    slug = _slug(nome_municipio)
 
     if not bases:
-        bases = [config.LEVANTAMENTOS_BASE_PATH]
+        bases = config.LEVANTAMENTOS_BASES_POR_ANO
 
-    xlsm, eh_entrega = _resolver_arquivo_em_bases(bases, nome_municipio, config)
+    xlsm, eh_entrega, ano = _resolver_arquivo_em_bases(bases, nome_municipio, config)
     mtime = os.path.getmtime(xlsm)
+    cache_path = _cache_path_do_ano(config, slug, ano)
 
     # Tenta cache
     cache = _ler_cache(cache_path, slug)
     if (cache and cache.get("schema") == CACHE_SCHEMA
             and cache.get("mtime") == mtime and cache.get("arquivo") == xlsm):
         log.info(
-            f"[cache-lev] Hit {slug} - {cache.get('total_pontos', '?')} pontos "
+            f"[cache-lev] Hit {slug} ({ano}) - {cache.get('total_pontos', '?')} pontos "
             f"({cache.get('gerado_em', '?')})"
         )
         return {
             "pontos":     cache["dados"],
             "categorias": cache.get("categorias", []),
             "entrega":    cache.get("entrega", False),
+            "ano":        cache.get("ano", ano),
             "stale":      False,
         }
     if cache:
-        log.info(f"[cache-lev] Invalidado {slug} (mtime/arquivo/schema mudou)")
+        log.info(f"[cache-lev] Invalidado {slug} ({ano}) (mtime/arquivo/schema mudou)")
 
     try:
         resultado = _tentar_ler_arquivo(xlsm, eh_entrega, config)
@@ -661,8 +690,9 @@ def carregar_levantamento(config, nome_municipio: str, bases=None):
                 f"[levantamento] Entrega ({os.path.basename(xlsm)}) sem a folha obrigatoria "
                 f"'{config.LEVANTAMENTO_ABA}' — tentando subpasta padrao"
             )
-            xlsm, eh_entrega = _resolver_arquivo_em_bases(bases, nome_municipio, config, somente_padrao=True)
+            xlsm, eh_entrega, ano = _resolver_arquivo_em_bases(bases, nome_municipio, config, somente_padrao=True)
             mtime = os.path.getmtime(xlsm)
+            cache_path = _cache_path_do_ano(config, slug, ano)
             resultado = _tentar_ler_arquivo(xlsm, eh_entrega, config)
             if resultado is None:
                 raise ValueError(
@@ -673,19 +703,20 @@ def carregar_levantamento(config, nome_municipio: str, bases=None):
         if not cache or cache.get("schema") != CACHE_SCHEMA:
             raise
         log.warning(
-            f"[cache-lev] Planilha em uso — servindo ultimo cache de {slug} "
+            f"[cache-lev] Planilha em uso — servindo ultimo cache de {slug} ({ano}) "
             f"({cache.get('gerado_em', '?')})"
         )
         return {
             "pontos":     cache["dados"],
             "categorias": cache.get("categorias", []),
             "entrega":    cache.get("entrega", False),
+            "ano":        cache.get("ano", ano),
             "stale":      True,
             "gerado_em":  cache.get("gerado_em"),
         }
 
     pontos, categorias = resultado
-    log.info(f"[levantamento] {len(pontos)} pontos validos em {slug}")
+    log.info(f"[levantamento] {len(pontos)} pontos validos em {slug} ({ano})")
 
     # Salva cache
     os.makedirs(os.path.dirname(cache_path), exist_ok=True)
@@ -695,6 +726,7 @@ def carregar_levantamento(config, nome_municipio: str, bases=None):
         "arquivo":       xlsm,
         "municipio":     nome_municipio,
         "entrega":       eh_entrega,
+        "ano":           ano,
         "gerado_em":     datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
         "total_pontos":  len(pontos),
         "categorias":    categorias,
@@ -703,8 +735,8 @@ def carregar_levantamento(config, nome_municipio: str, bases=None):
     try:
         with open(cache_path, "w", encoding="utf-8") as f:
             json.dump(novo, f, ensure_ascii=False, indent=2)
-        log.info(f"[cache-lev] Salvo {slug}")
+        log.info(f"[cache-lev] Salvo {slug} ({ano})")
     except Exception as e:
-        log.warning(f"[cache-lev] Nao foi possivel salvar cache {slug}: {e}")
+        log.warning(f"[cache-lev] Nao foi possivel salvar cache {slug} ({ano}): {e}")
 
-    return {"pontos": pontos, "categorias": categorias, "entrega": eh_entrega, "stale": False}
+    return {"pontos": pontos, "categorias": categorias, "entrega": eh_entrega, "ano": ano, "stale": False}

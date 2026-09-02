@@ -27,7 +27,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 import config
 from planilha_reader import carregar_dados
-from levantamento_reader import carregar_levantamento
+from levantamento_reader import carregar_levantamento, anos_disponiveis
 from transformadores_reader import carregar_transformadores
 from areas_inacessiveis_reader import carregar_areas_inacessiveis
 from duplicadas import detectar_duplicadas, exportar_xlsx, nome_arquivo_duplicados
@@ -167,25 +167,30 @@ def _obter_job(job_id: str):
 
 def _bases_levantamento_ordenadas() -> list:
     """
-    Bases de levantamento ordenadas por ano decrescente — sempre comeca pelo
-    ano mais recente e cai em fallback ate o mais antigo definido.
-
-    - LEVANTAMENTOS_BASE_PATH e tratada como a base do ano atual (mais recente).
-    - LEVANTAMENTOS_BASE_PATH_<ANO> sao bases de anos anteriores; o sufixo
-      numerico do attr define a ordem (maior primeiro).
-    Entradas vazias/None sao ignoradas.
+    Bases de levantamento (ano, caminho) ordenadas por ano decrescente —
+    sempre comeca pelo ano mais recente e cai em fallback ate o mais antigo
+    definido. A descoberta em si mora em config.LEVANTAMENTOS_BASES_POR_ANO
+    (varre o .env por LEVANTAMENTOS_BASE_PATH_<ANO>).
     """
-    base_atual = getattr(config, "LEVANTAMENTOS_BASE_PATH", None)
-    anteriores = []
-    for attr in dir(config):
-        m = re.fullmatch(r"LEVANTAMENTOS_BASE_PATH_(\d{4})", attr)
-        if not m:
-            continue
-        val = getattr(config, attr, None)
-        if val:
-            anteriores.append((int(m.group(1)), val))
-    anteriores.sort(key=lambda t: t[0], reverse=True)
-    return [b for b in [base_atual, *(v for _, v in anteriores)] if b]
+    return list(config.LEVANTAMENTOS_BASES_POR_ANO)
+
+
+def _bases_do_ano(ano: int) -> list:
+    """Filtra config.LEVANTAMENTOS_BASES_POR_ANO para um unico ano — usado
+    quando o frontend pede explicitamente um ano (?ano=), sem fallback pros
+    demais anos."""
+    return [(a, b) for a, b in config.LEVANTAMENTOS_BASES_POR_ANO if a == ano]
+
+
+def _ano_query():
+    """Le e valida o parametro ?ano= (4 digitos) da query string. Retorna
+    None se ausente; levanta ValueError se presente mas invalido."""
+    bruto = request.args.get("ano", "").strip()
+    if not bruto:
+        return None
+    if not re.fullmatch(r"\d{4}", bruto):
+        raise ValueError(f"Parametro 'ano' invalido: '{bruto}'")
+    return int(bruto)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -288,19 +293,29 @@ def areas_inacessiveis(key):
 @app.route("/levantamento/<path:key>")
 def levantamento(key):
     try:
-        nome  = _resolver_nome(key)
-        bases = _bases_levantamento_ordenadas()
-        log.info(f"[levantamento] {nome} -> bases={bases}")
+        nome = _resolver_nome(key)
+        todas_bases = _bases_levantamento_ordenadas()
+        ano_pedido = _ano_query()
+        if ano_pedido is not None:
+            bases = _bases_do_ano(ano_pedido)
+            if not bases:
+                return jsonify({"erro": f"Ano {ano_pedido} nao configurado"}), 404
+        else:
+            bases = todas_bases
+        log.info(f"[levantamento] {nome} -> bases={bases} (ano pedido={ano_pedido})")
         resultado = carregar_levantamento(config, nome, bases=bases)
         pontos = resultado["pontos"]
+        anos = anos_disponiveis(config, nome, todas_bases)
         return jsonify({
-            "municipio":  nome,
-            "total":      len(pontos),
-            "pontos":     pontos,
-            "categorias": resultado.get("categorias", []),
-            "entrega":    resultado.get("entrega", False),
-            "stale":      resultado.get("stale", False),
-            "gerado_em":  resultado.get("gerado_em"),
+            "municipio":       nome,
+            "total":           len(pontos),
+            "pontos":          pontos,
+            "categorias":      resultado.get("categorias", []),
+            "entrega":         resultado.get("entrega", False),
+            "stale":           resultado.get("stale", False),
+            "gerado_em":       resultado.get("gerado_em"),
+            "ano":             resultado.get("ano"),
+            "anos_disponiveis": anos,
         })
     except FileNotFoundError as e:
         log.warning(f"[levantamento] 404: {e}")
@@ -324,14 +339,23 @@ def duplicadas_iniciar(key):
     /duplicadas/download/<job_id>."""
     try:
         nome = _resolver_nome(key)
+        ano_pedido = _ano_query()
     except FileNotFoundError as e:
         return jsonify({"erro": str(e)}), 404
+    except ValueError as e:
+        return jsonify({"erro": str(e)}), 400
+
+    if ano_pedido is not None:
+        bases = _bases_do_ano(ano_pedido)
+        if not bases:
+            return jsonify({"erro": f"Ano {ano_pedido} nao configurado"}), 404
+    else:
+        bases = _bases_levantamento_ordenadas()
 
     job_id = _criar_job("duplicadas", total=1)
 
     def _run():
         try:
-            bases = _bases_levantamento_ordenadas()
             resultado_lev = carregar_levantamento(config, nome, bases=bases)
             pontos = resultado_lev["pontos"]
             geometria = geometria_para(key, nome)

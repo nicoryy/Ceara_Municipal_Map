@@ -1137,6 +1137,58 @@
       text-decoration: underline;
     }
 
+    /* ── filtros da visão geral (Status/Ano/Tipo) — escondidos dentro do
+       levantamento, onde não fazem sentido (o mapa de polígonos nem está
+       visível) ── */
+    #filtros-mapa.oculto {
+      display: none;
+    }
+
+    /* ── seletor de ano do levantamento (só aparece quando o município tem
+       dados em mais de um ano — ex.: regionais de Fortaleza) ── */
+    #anos-lev {
+      display: none;
+      padding: 0 16px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    #anos-lev.show {
+      display: block;
+    }
+    #anos-lev .painel-titulo {
+      padding: 12px 0 8px;
+      border-bottom: none;
+    }
+    .anos-lev-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .ano-lev-chip {
+      padding: 4px 11px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-family: monospace;
+      color: var(--muted);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      user-select: none;
+      transition: background .12s, color .12s, border-color .12s;
+    }
+    .ano-lev-chip:hover {
+      background: var(--bg);
+    }
+    .ano-lev-chip.ativo {
+      color: var(--accent);
+      border-color: var(--accent);
+      background: color-mix(in srgb, var(--accent) 15%, transparent);
+      cursor: default;
+    }
+    .ano-lev-chip.carregando {
+      opacity: .5;
+      pointer-events: none;
+    }
+
     /* ── cabeçalho fixo do município selecionado (nome/ibge/status + ações)
        position:sticky em vez de fixo de verdade: como #painel inteiro rola
        (ver acima), isso mantém nome/status/botões visíveis mesmo rolando
@@ -1534,23 +1586,25 @@
     </div>
 
     <div id="painel">
-      <div class="painel-titulo">
-        Status
-        <span class="filtro-limpar" id="filtro-status-limpar" onclick="limparFiltro('status')">Limpar</span>
-      </div>
-      <div id="legenda-lista"></div>
+      <div id="filtros-mapa">
+        <div class="painel-titulo">
+          Status
+          <span class="filtro-limpar" id="filtro-status-limpar" onclick="limparFiltro('status')">Limpar</span>
+        </div>
+        <div id="legenda-lista"></div>
 
-      <div class="painel-titulo" style="margin-top:0">
-        Ano
-        <span class="filtro-limpar" id="filtro-ano-limpar" onclick="limparFiltro('ano')">Limpar</span>
-      </div>
-      <div id="ano-lista"></div>
+        <div class="painel-titulo" style="margin-top:0">
+          Ano
+          <span class="filtro-limpar" id="filtro-ano-limpar" onclick="limparFiltro('ano')">Limpar</span>
+        </div>
+        <div id="ano-lista"></div>
 
-      <div class="painel-titulo" style="margin-top:0">
-        Tipo
-        <span class="filtro-limpar" id="filtro-tipo-limpar" onclick="limparFiltro('tipo')">Limpar</span>
+        <div class="painel-titulo" style="margin-top:0">
+          Tipo
+          <span class="filtro-limpar" id="filtro-tipo-limpar" onclick="limparFiltro('tipo')">Limpar</span>
+        </div>
+        <div id="tipo-lista"></div>
       </div>
-      <div id="tipo-lista"></div>
 
       <div id="kml-trafos-section">
         <div class="painel-titulo" style="margin-top:0">
@@ -1569,6 +1623,10 @@
             <em>🗺️</em>
             Clique em um município<br>para ver detalhes
           </div>
+        </div>
+        <div id="anos-lev">
+          <div class="painel-titulo">Ano do levantamento</div>
+          <div class="anos-lev-chips" id="anos-lev-chips"></div>
         </div>
         <div id="painel-acoes">
           <button id="btn-duplicadas" disabled title="Selecione um município para habilitar">
@@ -1880,6 +1938,9 @@
     let stackGroups            = null;   // Map<"lat,lng", [pontos]> — todos os grupos, viewport ou não
     let currentLevantamentoKey = null;   // IBGE (string) ou nome da regional
     let currentMunicipioNome   = null;
+    let levantamentoAno        = null;   // ano atualmente carregado (int) — vem do backend
+    let levantamentoAnos       = [];     // anos disponiveis para este municipio (desc), do backend
+    let levantamentoAnoTrocando = false; // trava os chips durante a troca de ano
     let spiderfied             = null;   // { markers: [], lines: [] }
     let savedCardHtml          = null;   // placeholder do card para restaurar ao sair
     let currentOutlineLayer    = null;   // outline do municipio focado durante o levantamento
@@ -2729,16 +2790,42 @@
       const layer = selectedLayer;
       if (!key || !layer) return;
 
+      // Status/Ano/Tipo são filtros da visão geral do mapa — não fazem
+      // sentido dentro do levantamento (o mapa de polígonos nem fica visível).
+      document.getElementById("filtros-mapa").classList.add("oculto");
+      await carregarLevantamentoAno(null, true, layer);
+    }
+
+    // Busca e desenha o levantamento de currentLevantamentoKey para um ano
+    // especifico (ou o ano resolvido automaticamente, se `ano` for null).
+    // primeiraCarga=true é a entrada normal no levantamento (via
+    // entrarLevantamento, que já resolveu `layer`); primeiraCarga=false é
+    // uma troca de ano vinda dos chips em #anos-lev, com o levantamento já
+    // aberto — nesse caso o levantamento anterior precisa ser limpo do mapa
+    // antes de redesenhar (desenharPontos cria um featureGroup novo sem
+    // remover o antigo) e o contorno/enquadramento atuais são preservados
+    // (sem chamar bloquearMapa de novo).
+    async function carregarLevantamentoAno(ano, primeiraCarga, layer) {
+      const key = currentLevantamentoKey;
+      if (!key || levantamentoAnoTrocando) return;
+
+      levantamentoAnoTrocando = true;
+      if (!primeiraCarga) renderizarAnosLevantamento();
+
+      const nomeMunicipio = currentMunicipioNome;
       const btn = document.getElementById("btn-levantamento");
       btn.classList.add("loading");
-      mostrarLoading(`Carregando levantamento de ${currentMunicipioNome}…`);
+      mostrarLoading(ano
+        ? `Carregando levantamento de ${nomeMunicipio} (${ano})…`
+        : `Carregando levantamento de ${nomeMunicipio}…`);
       // Nome disponível já aqui (mesmo antes de desenharPontos rotular o total)
       // pra rotular corretamente os gestos de PAN/ZOOM do fly-to de carregamento.
-      if (window.PERF) window.PERF.setContexto(currentMunicipioNome, 0);
+      if (window.PERF) window.PERF.setContexto(nomeMunicipio, 0);
       const perfOn = window.PERF && window.PERF.enabled;
       const perfT0 = perfOn ? performance.now() : 0;
       try {
-        const r = await fetch(`${API}/levantamento/${encodeURIComponent(key)}`);
+        const url = `${API}/levantamento/${encodeURIComponent(key)}` + (ano ? `?ano=${ano}` : "");
+        const r = await fetch(url);
         if (!r.ok) {
           const erro = await r.json().catch(() => ({ erro: r.statusText }));
           throw new Error(erro.erro || `HTTP ${r.status}`);
@@ -2746,6 +2833,22 @@
         const perfTFetch = perfOn ? performance.now() : 0;
         const json = await r.json();
         const perfTParse = perfOn ? performance.now() : 0;
+
+        if (!primeiraCarga) {
+          // Troca de ano: limpa o levantamento do ano anterior antes de
+          // redesenhar — sem isso os pontos do ano velho ficariam no mapa
+          // (ver comentário acima) e o painel de detalhe manteria o ponto
+          // clicado no ano anterior.
+          unspiderfy();
+          esconderTooltipCompartilhado();
+          if (levantamentoLayer) {
+            map.removeLayer(levantamentoLayer);
+            levantamentoLayer = null;
+          }
+          limparCategorias();
+          document.getElementById("card-municipio").innerHTML = "";
+        }
+
         // Categorias (só existem quando o backend leu a planilha de entrega)
         // precisam estar prontas ANTES de desenharPontos — corDoPonto()
         // consulta corPorCategoria ao criar cada marker.
@@ -2753,22 +2856,26 @@
         if (json.stale) {
           mostrarAviso(`Planilha em uso — mostrando dados de ${json.gerado_em || "cache anterior"}`);
         }
-        // Liga o modo levantamento ANTES do fly-to de bloquearMapa: o
-        // flyToBounds daquela função só termina de fato (moveend) alguns
-        // frames depois, de forma assíncrona — nesse meio tempo map.getBounds()
-        // ainda reflete a view anterior. atualizarPontosVisiveis() (chamada
-        // logo abaixo, dentro de desenharPontos) já faz um primeiro render
-        // "melhor esforço" com o viewport disponível nesse instante; o guard
-        // de levantamentoMode aqui garante que o moveend/zoomend real do
-        // fly-to (assim que a animação assentar) dispara a correção via
-        // onMapaMoveOuZoomEnd — sem isso o guard bloquearia essa correção.
-        levantamentoMode = true;
-        bloquearMapa(layer);
+
+        if (primeiraCarga) {
+          // Liga o modo levantamento ANTES do fly-to de bloquearMapa: o
+          // flyToBounds daquela função só termina de fato (moveend) alguns
+          // frames depois, de forma assíncrona — nesse meio tempo map.getBounds()
+          // ainda reflete a view anterior. atualizarPontosVisiveis() (chamada
+          // logo abaixo, dentro de desenharPontos) já faz um primeiro render
+          // "melhor esforço" com o viewport disponível nesse instante; o guard
+          // de levantamentoMode aqui garante que o moveend/zoomend real do
+          // fly-to (assim que a animação assentar) dispara a correção via
+          // onMapaMoveOuZoomEnd — sem isso o guard bloquearia essa correção.
+          levantamentoMode = true;
+          bloquearMapa(layer);
+        }
+
         const perfCarga = desenharPontos(json.pontos || []);
         if (perfOn) {
           requestAnimationFrame(() => {
             const perfTFrame = performance.now();
-            window.PERF.medirCarga(currentMunicipioNome, {
+            window.PERF.medirCarga(nomeMunicipio, {
               fetch:            (perfTFetch - perfT0).toFixed(1) + " ms",
               "parse json":     (perfTParse - perfTFetch).toFixed(1) + " ms",
               agrupamento:      perfCarga.tAgrupar.toFixed(1) + " ms",
@@ -2783,22 +2890,60 @@
             });
           });
         }
-        btn.classList.add("ativo");
-        // habilita FABs do modo levantamento
-        document.getElementById("btn-transformadores").classList.add("show");
-        document.getElementById("btn-areas").classList.add("show");
-        document.getElementById("btn-download").classList.add("show");
+
+        if (primeiraCarga) {
+          btn.classList.add("ativo");
+          // habilita FABs do modo levantamento
+          document.getElementById("btn-transformadores").classList.add("show");
+          document.getElementById("btn-areas").classList.add("show");
+          document.getElementById("btn-download").classList.add("show");
+        }
         // habilita o filtro geral (so faz sentido dentro do levantamento)
         resetFiltroGeral(true);
         configurarRangeData(json.pontos || []);
         atualizarBotaoGaleria(true);
+
+        levantamentoAno  = json.ano ?? null;
+        levantamentoAnos = json.anos_disponiveis || [];
       } catch (e) {
-        levantamentoMode = false;  // desfaz o "entrou" parcial em caso de erro
         console.error("Erro ao carregar levantamento:", e);
+        if (primeiraCarga) {
+          levantamentoMode = false;  // desfaz o "entrou" parcial em caso de erro
+        }
+        // Numa troca de ano, o erro não derruba o levantamento aberto —
+        // o ano/pontos anteriores continuam na tela.
         alert("Erro ao carregar levantamento: " + e.message);
       } finally {
         btn.classList.remove("loading");
         esconderLoading();
+        levantamentoAnoTrocando = false;
+        renderizarAnosLevantamento();
+      }
+    }
+
+    // Chips de ano em #anos-lev — só aparecem quando o município tem
+    // levantamento em mais de um ano (ex.: regionais de Fortaleza). Clicar
+    // num ano diferente do atual recarrega o levantamento daquele ano sem
+    // sair do modo levantamento (ver carregarLevantamentoAno).
+    function renderizarAnosLevantamento() {
+      const wrap  = document.getElementById("anos-lev");
+      const lista = document.getElementById("anos-lev-chips");
+      if (!levantamentoMode || levantamentoAnos.length <= 1) {
+        wrap.classList.remove("show");
+        lista.innerHTML = "";
+        return;
+      }
+      wrap.classList.add("show");
+      lista.innerHTML = "";
+      for (const ano of levantamentoAnos) {
+        const chip = document.createElement("span");
+        const ativo = ano === levantamentoAno;
+        chip.className = "ano-lev-chip" + (ativo ? " ativo" : "") + (levantamentoAnoTrocando ? " carregando" : "");
+        chip.textContent = ano;
+        if (!ativo) {
+          chip.addEventListener("click", () => carregarLevantamentoAno(ano, false));
+        }
+        lista.appendChild(chip);
       }
     }
 
@@ -4163,6 +4308,14 @@
       document.getElementById("btn-levantamento").classList.remove("ativo");
       levantamentoMode = false;
       atualizarBotaoGaleria(false);
+
+      // Restaura os filtros da visão geral (escondidos dentro do levantamento)
+      // e esconde/zera o seletor de ano
+      document.getElementById("filtros-mapa").classList.remove("oculto");
+      levantamentoAno = null;
+      levantamentoAnos = [];
+      levantamentoAnoTrocando = false;
+      renderizarAnosLevantamento();
 
       // Restaura o card do município selecionado, se ainda houver
       if (selectedLayer) {

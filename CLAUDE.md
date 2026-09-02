@@ -209,3 +209,29 @@ SERVER_PORT   = 5000                    # valor padrão, sobrescrevível via .en
 - Estilos via `getEstilo(ibge, opcoes)` e `getEstiloRegional(chave, opcoes)` — nunca `setStyle` direto sem passar por essas funções
 - Filtros cumulativos: `filtros = { status: null, tipo: null }` — ambos aplicados em `getEstilo` e `getEstiloRegional`
 - Toda atualização de estilos passa por `reaplicarEstilos()` que itera sobre `geojsonLayer` e `regionaisLayer`
+
+---
+
+## Levantamento com múltiplos anos (seletor de ano)
+
+Alguns municípios têm levantamento em mais de um ano (hoje, as regionais de Fortaleza — as demais existem
+em um ano só). O backend descobre todos os anos configurados no `.env` e o frontend deixa escolher qual ver.
+
+- `config.LEVANTAMENTOS_BASES_POR_ANO` — lista `[(ano, base), ...]` em ordem decrescente, montada varrendo
+  `os.environ` por `LEVANTAMENTOS_BASE_PATH_<ANO>` (qualquer ano de 4 dígitos — não precisa declarar o attr
+  em `config.py` para adicionar um ano novo, só a variável no `.env`). É a única fonte da ordem de anos;
+  `backend/server.py` e `backend/levantamento_reader.py` não fazem essa descoberta por conta própria.
+- `GET /levantamento/<key>?ano=<ANO>` — sem `ano`, resolve com fallback normal (mais recente primeiro). Com
+  `ano`, busca **só** naquele ano (sem fallback — é o que o usuário pediu). A resposta sempre traz `"ano"`
+  (o que foi efetivamente carregado) e `"anos_disponiveis"` (todos os anos em que aquele município tem
+  planilha resolvível, calculado por `levantamento_reader.anos_disponiveis()` — sondagem só de sistema de
+  arquivos, sem abrir workbook). `POST /duplicadas/<key>` aceita o mesmo `?ano=`.
+- Cache em `data/cache_levantamentos/` é **por ano**: `<slug>__<ano>.json` (antes era só `<slug>.json`) —
+  necessário porque alternar de ano precisa ser rápido (sem reler o Excel) e não pode invalidar o cache do
+  outro ano.
+- No frontend, `carregarLevantamentoAno(ano, primeiraCarga, layer)` centraliza tanto a entrada no
+  levantamento (`entrarLevantamento`) quanto a troca de ano pelos chips em `#anos-lev`
+  (`renderizarAnosLevantamento`). O bloco só aparece quando `anos_disponiveis.length > 1`.
+- **Limitação conhecida:** Transformadores (KML) e Áreas inacessíveis (`TRANSFORMADORES_BASE_PATH` /
+  `AREAS_INACESSIVEIS_BASE_PATH`) não seguem o ano selecionado — continuam sempre lendo da base do ano atual,
+  mesmo vendo o levantamento de um ano anterior.

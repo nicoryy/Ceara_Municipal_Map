@@ -5,7 +5,9 @@
 # =============================================================================
 
 import os
+import re
 import unicodedata
+from datetime import datetime
 from dotenv import load_dotenv
 
 load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env"))
@@ -118,10 +120,48 @@ LARGURA_BORDA = 0
 # padrão. Comparação de nomes é case-insensitive em todas as etapas.
 # LEVANTAMENTOS_BASE_PATH e a base do ano atual (obrigatoria). As demais
 # LEVANTAMENTOS_BASE_PATH_<ANO> (anos anteriores) sao opcionais — o server
-# descobre automaticamente todas as que existirem no .env.
-LEVANTAMENTOS_BASE_PATH      = _caminho_obrigatorio("LEVANTAMENTOS_BASE_PATH")
-LEVANTAMENTOS_BASE_PATH_2025 = _caminho_opcional("LEVANTAMENTOS_BASE_PATH_2025")
-LEVANTAMENTOS_BASE_PATH_2024 = _caminho_opcional("LEVANTAMENTOS_BASE_PATH_2024")
+# descobre automaticamente todas as que existirem no .env (qualquer ano de
+# 4 digitos, nao apenas os anos "conhecidos" — nao precisa mexer no codigo
+# pra adicionar um ano novo).
+LEVANTAMENTOS_BASE_PATH = _caminho_obrigatorio("LEVANTAMENTOS_BASE_PATH")
+
+
+def _ano_da_base(caminho):
+    """Extrai o ano (4 digitos, 19xx/20xx) do caminho da base — o .env usa
+    a convencao <BASE>\\<ANO>\\Municipios. None se nao achar."""
+    if not caminho:
+        return None
+    partes = re.split(r"[\\/]", caminho)
+    for parte in reversed(partes):
+        if re.fullmatch(r"(?:19|20)\d{2}", parte):
+            return int(parte)
+    return None
+
+
+# Ano da base atual — do .env (LEVANTAMENTOS_ANO_ATUAL, opcional) senao
+# detectado no proprio caminho de LEVANTAMENTOS_BASE_PATH, senao o ano
+# corrente do sistema.
+_ano_atual_env = _env_opcional("LEVANTAMENTOS_ANO_ATUAL")
+LEVANTAMENTOS_ANO_ATUAL = (
+    int(_ano_atual_env) if _ano_atual_env.strip().isdigit()
+    else (_ano_da_base(LEVANTAMENTOS_BASE_PATH) or datetime.now().year)
+)
+
+# Bases de levantamento por ano, em ordem decrescente (ano atual primeiro).
+# Descoberta automaticamente varrendo o .env por LEVANTAMENTOS_BASE_PATH_<ANO>
+# — qualquer ano de 4 digitos, sem precisar declarar o attr aqui.
+LEVANTAMENTOS_BASES_POR_ANO = [(LEVANTAMENTOS_ANO_ATUAL, LEVANTAMENTOS_BASE_PATH)]
+for _nome_var in os.environ:
+    _m = re.fullmatch(r"LEVANTAMENTOS_BASE_PATH_(\d{4})", _nome_var)
+    if not _m:
+        continue
+    _ano = int(_m.group(1))
+    if _ano == LEVANTAMENTOS_ANO_ATUAL:
+        continue  # base atual ja incluida acima, tem precedencia
+    _val = _caminho_opcional(_nome_var)
+    if _val:
+        LEVANTAMENTOS_BASES_POR_ANO.append((_ano, _val))
+LEVANTAMENTOS_BASES_POR_ANO.sort(key=lambda t: t[0], reverse=True)
 
 # Prefixo do nome do arquivo de levantamento dentro da subpasta
 LEVANTAMENTO_ARQUIVO_PREFIXO = _env_opcional("LEVANTAMENTO_ARQUIVO_PREFIXO", "FECHAMENTO")
